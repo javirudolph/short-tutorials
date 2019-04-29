@@ -56,7 +56,7 @@ Twitter and Github **@javirudolph**
 -  Hadley Wickham's [R packages](http://r-pkgs.had.co.nz/)
 -  Emil Hvitfeldt's [blog post](https://www.hvitfeldt.me/blog/usethis-workflow-for-package-development/)
 -  [devtools](https://devtools.r-lib.org/)
--  This tutorial/presentation: <>
+-  This tutorial/presentation: <https://github.com/javirudolph/short-tutorials/>
 
 
 ## Setup  
