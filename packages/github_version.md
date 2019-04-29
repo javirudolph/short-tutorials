@@ -3,6 +3,8 @@ R packages
 Javiera Rudolph
 April 29, 2019
 
+Well... unfortunately, I haven't figured out how to save my .Rmd slides into a pdf without it completely changing the format. In an effort to make the info available, I've used the `github_document` here. It doesn't look great, but at least you would be able to access the info I'll give during my presentation.
+
 Introductions
 -------------
 
