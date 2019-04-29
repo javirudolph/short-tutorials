@@ -53,7 +53,8 @@ Twitter and Github **@javirudolph**
 
 ## Useful resources  
 
--  Hadley Wickham's [R packages](http://r-pkgs.had.co.nz/)
+-  Hadley Wickham's [R packages](http://r-pkgs.org/)  
+        - Second edition is in progress. Updates with `usethis`
 -  Emil Hvitfeldt's [blog post](https://www.hvitfeldt.me/blog/usethis-workflow-for-package-development/)
 -  [devtools](https://devtools.r-lib.org/)
 -  This tutorial/presentation: <https://github.com/javirudolph/short-tutorials/>
