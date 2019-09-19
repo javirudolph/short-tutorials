@@ -74,7 +74,15 @@ ggplot(d, aes(x = x, y = y)) +
   ggtitle("Your Plot's title", subtitle = "Any subtitle?")
 
 
+# A bar plot
+# We will add a column to the dataframe 
+d$z <- c("red", "red", "red", "blue", "blue", "green")
 
+ggplot(data = d, aes(x = z)) +
+  geom_bar() +
+  xlab("The x axis label") +
+  ylab("The y axis label") +
+  ggtitle("Your Plot's title", subtitle = "Any subtitle?")
 
 
 

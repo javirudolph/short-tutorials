@@ -11,6 +11,26 @@ knitr::opts_chunk$set(echo = TRUE)
 
 1. What is the difference between using the `[]` and `[[]]` operators and when do you use each? 
 
-2. Use R to calculate the result of the square root of your birthdate, where birthdate is year+month+date. Show the code and answer in your document.
+2. Use R to calculate the result of the square root of your birthdate, where birthdate is year+month+date. Show the code and answer in your document.Tip, type `?sqrt()` in the console first
 
-3. 
+3. Create a vector `x` with each of the numbers on your birthdate and a vector `y` that is `x` squared. Type the code you used to make this.
+
+4. Create a dataframe with the two vectors from Question 3 and assign a name to it. 
+
+5. Plot the results and modify all the labels. Include the plot into your word document.
+
+6. Use the `?` operator or the `help()` function to look up the following functions: `mean()`, `sd()`, `min()`, `max()`, `length()` and in your own words describe what these functions do. 
+
+7. Install and load the `ggplot2` package, or the `tidyverse` package. What commands do you use for this action?
+
+8. Download the spreadsheet we filled out in class as a csv file and import it to your R session. Remember that to find the file and save things in the right place you need to set your working directory. To import you can use the `read.csv()` function.
+
+For figures, make sure you include axis labels, units and titles.Using `ggplot()` create the following new figures:
+
+9. A distribution of the class heights. Use `geom_histogram()`
+10. A scatter plot of month and day of birth, colored by whether or not they like dogs. Tip: for the scatter plot you can use `geom_point()` and to color you can use `fill = ` in the `aes()` of `ggplot`
+11. A bar plot for people's favorite colors.
+
+
+
+
