@@ -1,0 +1,16 @@
+---
+title: "Intro to R - General Ecology"
+author: "Javiera Rudolph"
+date: "9/18/2019"
+output: github_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+1. What is the difference between using the `[]` and `[[]]` operators and when do you use each? 
+
+2. Use R to calculate the result of the square root of your birthdate, where birthdate is year+month+date. Show the code and answer in your document.
+
+3. 
