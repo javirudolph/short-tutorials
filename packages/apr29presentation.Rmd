@@ -4,9 +4,9 @@ author: "Javiera Rudolph"
 date: "April 29, 2019"
 output:
   ioslides_presentation:
-    widescreen: true
     logo: imgs/logo.png
-subtitle: "Sharing with others and helping yourself"
+    widescreen: yes
+subtitle: Sharing with others and helping yourself
 ---
 
 <style type="text/css">
