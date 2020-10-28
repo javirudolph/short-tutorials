@@ -14,6 +14,7 @@
 ## Some built in functions
 mean(c(1,2,3,4,5,6))
 round(pi, digits = 5)
+sd(1:10)
 
 ## Generate random numbers with built in functions
 rnorm(100)
@@ -22,12 +23,16 @@ rnorm(100)
 ## naming objects
 # scalar object
 a <- 2
+a <- 5
 # vector object
 b <- c(5,6,3,4)
+
 # matrix
 c <- matrix(c(9,3,4,5,7,4), nrow = 3, ncol = 2)
+
 # dataframe
 d <- data.frame(x = c(0,1,2,3,4,5), y = c(0, 1, 4, 9, 16, 25))
+
 # List
 mylist <- list(a,b,c,d)
 
@@ -78,14 +83,18 @@ ggplot(d, aes(x = x, y = y)) +
 # We will add a column to the dataframe 
 d$z <- c("red", "red", "red", "blue", "blue", "green")
 
-ggplot(data = d, aes(x = z)) +
+ggplot(data = d, aes(x = z, fill = z)) +
   geom_bar() +
   xlab("The x axis label") +
   ylab("The y axis label") +
   ggtitle("Your Plot's title", subtitle = "Any subtitle?")
 
 
+#######
+# LOAD THE CSV FILE
+class_data <- read.csv("PCB4043C-Intro2R - Sheet1.csv")
 
+data <- read.csv("PCB4043C-Intro2R - Sheet1.csv")
 
 
 
