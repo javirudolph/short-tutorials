@@ -22,7 +22,20 @@ library(R2WinBUGS)
 library(RCurl)
 ```
 
+This is an example of binomial survival, where we follow the fate of $n$ individuals during a single time interval. We let $X = \text{number of survivors}$ be binomially distributed:
+$$f(x|p) = \binom{n}{x}p^{x}(1-p)^{n-x}$$
+In the absence of previous information we may postulate that the prior distribution of $p$ is uniform:
+$$g(p)=1, \quad 0\leq p \leq 1$$
+Suppose $n=20$ and $x=5$. The posterior distribution is
+$$h(p|x)\propto f(x|p)g(p) = \binom{n}{x}p^x(1-p)^{n-x}$$
+This posterior distribution representes the belief of a Bayesian who was initially indiferent to the value of $p$ after observing 5 survivals in 20 trials. The uniform prior expresses an indiference about the possible values of $p$, which is modified after the experiment. 
 
+# Quantifying prior beliefs using a Beta distribution
+
+If instead, we use a Beta distribution for $p$, we get:
+$$g(p) \propto p^{a-1}(1-p)^{b-1}$$
+and the posterior distribution of $p$ given $x$ is:
+$$h(p|x)\propto f(x|p)g(p) = \binom{n}{x}p^{x}(1-p)^{n-x}p^{a-1}(1-p)^{b-1}\propto p^{a+x-1}(1-p)^{n+b-x-1}$$
 ```{r}
 bbnegllike <- function(guess, Yvec, ntrials=20){
   
