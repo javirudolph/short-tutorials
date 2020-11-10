@@ -5,7 +5,7 @@ output: html_document
 
 
 ```{r}
-knitr::opts_chunk$set(eval= FALSE)
+knitr::opts_chunk$set(eval= TRUE)
 ```
 
 
@@ -36,7 +36,17 @@ If instead, we use a Beta distribution for $p$, we get:
 $$g(p) \propto p^{a-1}(1-p)^{b-1}$$
 and the posterior distribution of $p$ given $x$ is:
 $$h(p|x)\propto f(x|p)g(p) = \binom{n}{x}p^{x}(1-p)^{n-x}p^{a-1}(1-p)^{b-1}\propto p^{a+x-1}(1-p)^{n+b-x-1}$$
+which is a new beta distribution with parameters $a' = a+x$ and $b' = n+b-x$. 
+
+Note that $\mu_{prior} = \frac{a}{a+b}$ whereas
+$$\mu_{post} = \frac{a'}{a'+b'} = \frac{a+x}{a+b+n} = \frac{a+x}{a+b+n} \color{blue}{\left( \frac{a}{a+b} \right)} + \frac{n}{a+b+n}\color{blue}{\bar{x}}$$
+where $\bar{x} = x/n$ is the sample mean.  
+The posterior mean is a \textcolor{blue}{weighted} average of the prior mean and the sample mean! As $n$ grows large, $x/n$ approaches true $p_0$ value and $\mu_post$ approaches $p_0$ (and variance goes to 0).
+
+
 ```{r}
+# This function returns the sum of the negative log likelihood for a beta binomial distribution consisting of n number of trials
+
 bbnegllike <- function(guess, Yvec, ntrials=20){
   
   pos.guess <- exp(guess)
@@ -49,19 +59,26 @@ bbnegllike <- function(guess, Yvec, ntrials=20){
   
 }
 
+# As an example
+
 n <- 30
-a <- 2 #trute value of a
+a <- 2 #true value of a
 b <- 5 # true value of b
 ntrials <- 20
 
+# We randomly sample a value of p from a beta distribution for each individual using the true parameters a and b
 P <- rbeta(n=n, shape1=a, shape2=b)
+# And we calculate the survival for the individuals based on the that probability P following a binomial model.
 YgP <- rbinom(n=n, size=ntrials, prob=P)
 
 
+# Using the function described above and the sample data from Y given P
 myguess <- log(c(1.5,4))
 opt.samp <- optim(par=myguess, fn=bbnegllike, method="Nelder-Mead", Yvec=YgP, ntrials=ntrials)
 a.hat <- exp(opt.samp$par[1])
 b.hat <- exp(opt.samp$par[2])
+
+# These are the estimates for the parameters a and b, based on the data we provided.
 print(a.hat)
 print(b.hat)
 ```
@@ -73,7 +90,7 @@ Then Data Cloning which includes the Bayesian results as a special case
 
 #####  The first thing to do is to put together a function with the posterior calculations that needs to be sent to JAGS.  This function is written in  JAGS language 
 
-```{r}
+```{r eval = FALSE}
 beta.binom <- function(){
   
   # needs:
@@ -121,7 +138,7 @@ summary(bayesian.fit)
 * How do you do that, well, you simply copy the data 'K' times
 * If K=1, the results correspond to a Bayesian analysis, and as K grows large, the resulting posterior converges to a MVNorm  whose mean is equal to the MLEs and variance is equal to (1/K)*Inverse(Fisher's info)
 
-```{r}
+```{r eval = FALSE}
 DC.beta.binom <- function(){
   
   # needs:
@@ -153,7 +170,7 @@ DC.beta.binom <- function(){
 
 
 
-```{r}
+```{r eval = FALSE}
 ##### Simulating data:
 n <- 30
 a <- 2
@@ -166,7 +183,7 @@ YgP <- rbinom(n=n, size=ntrials, prob=P)
 
 
 ######  Bayesian fit ######
-```{r}
+```{r eval = FALSE}
 K <- 1
 prior.low <- 0
 prior.high <- 100
@@ -191,7 +208,7 @@ Cred.Ints <- apply(bayesian.fit[[1]], 2,FUN=function(x){quantile(x,probs=c(0.025
 
 ###### STRAIGHT UP NUMERICAL OPTIMIZATION MLE ESTIMATION ######
 
-```{r}
+```{r eval = FALSE}
 myguess <- log(c(1.5,4))
 opt.samp <- optim(par=myguess, fn=bbnegllike, method="Nelder-Mead", Yvec=YgP, ntrials=ntrials)
 a.hat <- exp(opt.samp$par[1])
@@ -206,7 +223,7 @@ print(b.hat)
 #[1] 9.650745
 
 #------------------------------------------------------
-```{r}
+```{r eval = FALSE}
 
 K <- 32
 prior.low <- 0
@@ -228,7 +245,7 @@ plot(ml.fit)
 #b 9.828958 0.8579340 0.007005002     0.02080979
 
 ########  Wald Confidence Intervals ########
-```{r}
+```{r eval = FALSE}
 
 kth.post <- ml.fit[[1]]
 mles <- apply(kth.post, 2,mean)
@@ -260,7 +277,7 @@ print(Cred.Ints)
 # Say I need to compute Var(Y), where Y~exp(lambda=3).
 # Var(Y) = I = int_{0}^{Infty} (y-(1/lambda))^2 *lambda*exp(-y*lambda) dy
 
-```{r}
+```{r eval = FALSE}
 # First, set the value of lambda
 lam <- 3
 nsamps <- 1000000
@@ -289,7 +306,7 @@ mean(mc.integrand)# LLN
 ######  h(x|y;theta) \propto f(y|x)g(x;theta)
 ######  which we can sample from using a simple MCMC run.
 
-```{r}
+```{r eval = FALSE}
 
 Kalman.beta.binom <- function(){
   
@@ -313,7 +330,7 @@ Kalman.beta.binom <- function(){
 
 ```
 
-```{r}
+```{r eval = FALSE}
 
 out.parms <- c("Prand")
 kalman.list <- list(Y=YgP, len=n, ntrials=ntrials, a=mles[1], b=mles[2])
@@ -327,7 +344,7 @@ plot(kalman.samps)
 
 
 
-```{r}
+```{r eval = FALSE}
 
 
 bo <- 1.5

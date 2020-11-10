@@ -381,7 +381,21 @@ summary {
 
 <pre class="r"><code>knitr::opts_chunk$set(eval= FALSE)</code></pre>
 <pre class="r"><code>library(&quot;extraDistr&quot;)
-library(&quot;MASS&quot;)</code></pre>
+library(&quot;MASS&quot;)
+
+#library(&quot;MASS&quot;)
+library(rjags)
+library(parallel)
+library(dclone)
+library(abind)
+library(R2WinBUGS)
+library(RCurl)</code></pre>
+<p>This is an example of binomial survival, where we follow the fate of <span class="math inline">\(n\)</span> individuals during a single time interval. We let <span class="math inline">\(X = \text{number of survivors}\)</span> be binomially distributed: <span class="math display">\[f(x|p) = \binom{n}{x}p^{x}(1-p)^{n-x}\]</span> In the absence of previous information we may postulate that the prior distribution of <span class="math inline">\(p\)</span> is uniform: <span class="math display">\[g(p)=1, \quad 0\leq p \leq 1\]</span> Suppose <span class="math inline">\(n=20\)</span> and <span class="math inline">\(x=5\)</span>. The posterior distribution is <span class="math display">\[h(p|x)\propto f(x|p)g(p) = \binom{n}{x}p^x(1-p)^{n-x}\]</span> This posterior distribution representes the belief of a Bayesian who was initially indiferent to the value of <span class="math inline">\(p\)</span> after observing 5 survivals in 20 trials. The uniform prior expresses an indiference about the possible values of <span class="math inline">\(p\)</span>, which is modified after the experiment.</p>
+<div id="quantifying-prior-beliefs-using-a-beta-distribution" class="section level1">
+<h1>Quantifying prior beliefs using a Beta distribution</h1>
+<p>If instead, we use a Beta distribution for <span class="math inline">\(p\)</span>, we get: <span class="math display">\[g(p) \propto p^{a-1}(1-p)^{b-1}\]</span> and the posterior distribution of <span class="math inline">\(p\)</span> given <span class="math inline">\(x\)</span> is: <span class="math display">\[h(p|x)\propto f(x|p)g(p) = \binom{n}{x}p^{x}(1-p)^{n-x}p^{a-1}(1-p)^{b-1}\propto p^{a+x-1}(1-p)^{n+b-x-1}\]</span> which is a new beta distribution with parameters <span class="math inline">\(a&#39; = a+x\)</span> and <span class="math inline">\(b&#39; = n+b-x\)</span>.</p>
+<p>Note that <span class="math inline">\(\mu_{prior} = \frac{a}{a+b}\)</span> whereas <span class="math display">\[\mu_{post} = \frac{a&#39;}{a&#39;+b&#39;} = \frac{a+x}{a+b+n} = \frac{a+x}{a+b+n} \color{blue}{\left( \frac{a}{a+b} \right)} + \frac{a}{a+b+n}\color{blue}{\bar{x}}\]</span> where <span class="math inline">\(\bar{x} = x/n\)</span> is the sample mean.<br />
+The posterior mean is a  average of the prior mean and the sample mean! As <span class="math inline">\(n\)</span> grows large, <span class="math inline">\(x/n\)</span> approaches true <span class="math inline">\(p_0\)</span> value and <span class="math inline">\(\mu_post\)</span> approaches <span class="math inline">\(p_0\)</span> (and variance goes to 0).</p>
 <pre class="r"><code>bbnegllike &lt;- function(guess, Yvec, ntrials=20){
   
   pos.guess &lt;- exp(guess)
@@ -412,13 +426,6 @@ print(b.hat)</code></pre>
 <div id="now-using-mcmc-first-a-bayesian-approach." class="section level4">
 <h4>Now, using MCMC: first a Bayesian approach.</h4>
 <p>Then Data Cloning which includes the Bayesian results as a special case</p>
-<pre class="r"><code>library(&quot;MASS&quot;)
-library(rjags)
-library(parallel)
-library(dclone)
-library(abind)
-library(R2WinBUGS)
-library(RCurl)</code></pre>
 <div id="the-first-thing-to-do-is-to-put-together-a-function-with-the-posterior-calculations-that-needs-to-be-sent-to-jags.-this-function-is-written-in-jags-language" class="section level5">
 <h5>The first thing to do is to put together a function with the posterior calculations that needs to be sent to JAGS. This function is written in JAGS language</h5>
 <pre class="r"><code>beta.binom &lt;- function(){
@@ -576,6 +583,7 @@ print(Cred.Ints)</code></pre>
 </div>
 <div id="ehxfx-with-respect-of-the-distribution-fx" class="section level5">
 <h5>== E[(h(x)/f(x))] with respect of the distribution f(x)</h5>
+</div>
 </div>
 </div>
 <div id="example-of-monte-carlo-integration" class="section level1">
