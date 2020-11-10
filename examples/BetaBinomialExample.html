@@ -379,23 +379,44 @@ summary {
 </div>
 
 
-<pre class="r"><code>knitr::opts_chunk$set(eval= FALSE)</code></pre>
+<pre class="r"><code>knitr::opts_chunk$set(eval= TRUE)</code></pre>
 <pre class="r"><code>library(&quot;extraDistr&quot;)
 library(&quot;MASS&quot;)
 
-#library(&quot;MASS&quot;)
-library(rjags)
-library(parallel)
-library(dclone)
-library(abind)
-library(R2WinBUGS)
-library(RCurl)</code></pre>
+# library(rjags)
+# library(parallel)
+# library(dclone)
+# library(abind)
+# library(R2WinBUGS)
+# library(RCurl)</code></pre>
 <p>This is an example of binomial survival, where we follow the fate of <span class="math inline">\(n\)</span> individuals during a single time interval. We let <span class="math inline">\(X = \text{number of survivors}\)</span> be binomially distributed: <span class="math display">\[f(x|p) = \binom{n}{x}p^{x}(1-p)^{n-x}\]</span> In the absence of previous information we may postulate that the prior distribution of <span class="math inline">\(p\)</span> is uniform: <span class="math display">\[g(p)=1, \quad 0\leq p \leq 1\]</span> Suppose <span class="math inline">\(n=20\)</span> and <span class="math inline">\(x=5\)</span>. The posterior distribution is <span class="math display">\[h(p|x)\propto f(x|p)g(p) = \binom{n}{x}p^x(1-p)^{n-x}\]</span> This posterior distribution representes the belief of a Bayesian who was initially indiferent to the value of <span class="math inline">\(p\)</span> after observing 5 survivals in 20 trials. The uniform prior expresses an indiference about the possible values of <span class="math inline">\(p\)</span>, which is modified after the experiment.</p>
 <div id="quantifying-prior-beliefs-using-a-beta-distribution" class="section level1">
 <h1>Quantifying prior beliefs using a Beta distribution</h1>
 <p>If instead, we use a Beta distribution for <span class="math inline">\(p\)</span>, we get: <span class="math display">\[g(p) \propto p^{a-1}(1-p)^{b-1}\]</span> and the posterior distribution of <span class="math inline">\(p\)</span> given <span class="math inline">\(x\)</span> is: <span class="math display">\[h(p|x)\propto f(x|p)g(p) = \binom{n}{x}p^{x}(1-p)^{n-x}p^{a-1}(1-p)^{b-1}\propto p^{a+x-1}(1-p)^{n+b-x-1}\]</span> which is a new beta distribution with parameters <span class="math inline">\(a&#39; = a+x\)</span> and <span class="math inline">\(b&#39; = n+b-x\)</span>.</p>
-<p>Note that <span class="math inline">\(\mu_{prior} = \frac{a}{a+b}\)</span> whereas <span class="math display">\[\mu_{post} = \frac{a&#39;}{a&#39;+b&#39;} = \frac{a+x}{a+b+n} = \frac{a+x}{a+b+n} \color{blue}{\left( \frac{a}{a+b} \right)} + \frac{a}{a+b+n}\color{blue}{\bar{x}}\]</span> where <span class="math inline">\(\bar{x} = x/n\)</span> is the sample mean.<br />
+<p>Note that <span class="math inline">\(\mu_{prior} = \frac{a}{a+b}\)</span> whereas <span class="math display">\[\mu_{post} = \frac{a&#39;}{a&#39;+b&#39;} = \frac{a+x}{a+b+n} = \frac{a+x}{a+b+n} \color{blue}{\left( \frac{a}{a+b} \right)} + \frac{n}{a+b+n}\color{blue}{\bar{x}}\]</span> where <span class="math inline">\(\bar{x} = x/n\)</span> is the sample mean.<br />
 The posterior mean is a  average of the prior mean and the sample mean! As <span class="math inline">\(n\)</span> grows large, <span class="math inline">\(x/n\)</span> approaches true <span class="math inline">\(p_0\)</span> value and <span class="math inline">\(\mu_post\)</span> approaches <span class="math inline">\(p_0\)</span> (and variance goes to 0).</p>
+<div id="example-using-r" class="section level2">
+<h2>Example using R</h2>
+<p>We simulate a vector of data, where survival is binomially distributed, and the probability of survival is randomly sampled from a beta distribution.</p>
+<pre class="r"><code>n &lt;- 30
+a &lt;- 2 #true value of a
+b &lt;- 5 # true value of b
+ntrials &lt;- 20
+
+# We randomly sample values of p from a beta distribution using the true parameters a and b
+P &lt;- rbeta(n=n, shape1=a, shape2=b)
+P</code></pre>
+<pre><code>##  [1] 0.07859336 0.30075120 0.27610348 0.11725674 0.15240366 0.10419010
+##  [7] 0.46886943 0.33808673 0.11183552 0.09252801 0.73249898 0.41465204
+## [13] 0.58384392 0.47145750 0.30674218 0.36972325 0.23025477 0.12220459
+## [19] 0.49705307 0.15223033 0.09992767 0.53645547 0.37886917 0.13851630
+## [25] 0.51828245 0.07658863 0.24834797 0.42093945 0.21995387 0.47363932</code></pre>
+<pre class="r"><code># And for each (n=30), we calculate the survival for the individuals (number of successes out of 20 trials) based on P.
+YgP &lt;- rbinom(n=n, size=ntrials, prob=P)
+YgP</code></pre>
+<pre><code>##  [1]  1  8  8  1  4  0  6  6  3  2 13  4  9 13  6  7  6  1  9  4  1  9  8  3 11
+## [26]  3  5  5  5  9</code></pre>
+<p>Now, using the data we created, we can estimate the parameters a and b, based on the data. We should get values close to the true values of a and b, which we used to simulate the data in the first place. The following function returns the sum of the negative log likelihood for a beta binomial distribution, which we will use for getting the maximum likelihood estimators for a and b.</p>
 <pre class="r"><code>bbnegllike &lt;- function(guess, Yvec, ntrials=20){
   
   pos.guess &lt;- exp(guess)
@@ -406,25 +427,38 @@ The posterior mean is a  average of the prior mean and the sample mean! As <span
   
   return(-sum(bbnegll.vec))
   
-}
-
-n &lt;- 30
-a &lt;- 2 #trute value of a
-b &lt;- 5 # true value of b
-ntrials &lt;- 20
-
-P &lt;- rbeta(n=n, shape1=a, shape2=b)
-YgP &lt;- rbinom(n=n, size=ntrials, prob=P)
-
-
-myguess &lt;- log(c(1.5,4))
-opt.samp &lt;- optim(par=myguess, fn=bbnegllike, method=&quot;Nelder-Mead&quot;, Yvec=YgP, ntrials=ntrials)
+}</code></pre>
+<pre class="r"><code># Using the function described above and the sample data from Y given P
+myguess &lt;- log(c(1.5,4)) # My guess for the parameters a and b
+opt.samp &lt;- optim(par=myguess, fn=bbnegllike, method=&quot;Nelder-Mead&quot;,
+                  Yvec=YgP, ntrials=ntrials)
 a.hat &lt;- exp(opt.samp$par[1])
 b.hat &lt;- exp(opt.samp$par[2])
-print(a.hat)
-print(b.hat)</code></pre>
-<div id="now-using-mcmc-first-a-bayesian-approach." class="section level4">
-<h4>Now, using MCMC: first a Bayesian approach.</h4>
+
+# These are the estimates for the parameters a and b, based on the data we provided, and we can compare those to the true values we used for simulating the data
+knitr::kable(data.frame(a.hat = a.hat, a = a, b.hat = b.hat, b=b))</code></pre>
+<table>
+<thead>
+<tr class="header">
+<th align="right">a.hat</th>
+<th align="right">a</th>
+<th align="right">b.hat</th>
+<th align="right">b</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td align="right">2.302796</td>
+<td align="right">2</td>
+<td align="right">5.860349</td>
+<td align="right">5</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+<div id="now-using-mcmc-first-a-bayesian-approach." class="section level1">
+<h1>Now, using MCMC: first a Bayesian approach.</h1>
 <p>Then Data Cloning which includes the Bayesian results as a special case</p>
 <div id="the-first-thing-to-do-is-to-put-together-a-function-with-the-posterior-calculations-that-needs-to-be-sent-to-jags.-this-function-is-written-in-jags-language" class="section level5">
 <h5>The first thing to do is to put together a function with the posterior calculations that needs to be sent to JAGS. This function is written in JAGS language</h5>
@@ -583,7 +617,6 @@ print(Cred.Ints)</code></pre>
 </div>
 <div id="ehxfx-with-respect-of-the-distribution-fx" class="section level5">
 <h5>== E[(h(x)/f(x))] with respect of the distribution f(x)</h5>
-</div>
 </div>
 </div>
 <div id="example-of-monte-carlo-integration" class="section level1">

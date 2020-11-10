@@ -9,17 +9,16 @@ knitr::opts_chunk$set(eval= TRUE)
 ```
 
 
-```{r}
+```{r message=FALSE, warning=FALSE}
 library("extraDistr")
 library("MASS")
 
-#library("MASS")
-library(rjags)
-library(parallel)
-library(dclone)
-library(abind)
-library(R2WinBUGS)
-library(RCurl)
+# library(rjags)
+# library(parallel)
+# library(dclone)
+# library(abind)
+# library(R2WinBUGS)
+# library(RCurl)
 ```
 
 This is an example of binomial survival, where we follow the fate of $n$ individuals during a single time interval. We let $X = \text{number of survivors}$ be binomially distributed:
@@ -43,10 +42,25 @@ $$\mu_{post} = \frac{a'}{a'+b'} = \frac{a+x}{a+b+n} = \frac{a+x}{a+b+n} \color{b
 where $\bar{x} = x/n$ is the sample mean.  
 The posterior mean is a \textcolor{blue}{weighted} average of the prior mean and the sample mean! As $n$ grows large, $x/n$ approaches true $p_0$ value and $\mu_post$ approaches $p_0$ (and variance goes to 0).
 
+## Example using R
+We simulate a vector of data, where survival is binomially distributed, and the probability of survival is randomly sampled from a beta distribution.
+```{r}
+n <- 30
+a <- 2 #true value of a
+b <- 5 # true value of b
+ntrials <- 20
+
+# We randomly sample values of p from a beta distribution using the true parameters a and b
+P <- rbeta(n=n, shape1=a, shape2=b)
+P
+# And for each (n=30), we calculate the survival for the individuals (number of successes out of 20 trials) based on P.
+YgP <- rbinom(n=n, size=ntrials, prob=P)
+YgP
+```
+
+Now, using the data we created, we can estimate the parameters a and b, based on the data. We should get values close to the true values of a and b, which we used to simulate the data in the first place. The following function returns the sum of the negative log likelihood for a beta binomial distribution, which we will use for getting the maximum likelihood estimators for a and b.
 
 ```{r}
-# This function returns the sum of the negative log likelihood for a beta binomial distribution consisting of n number of trials
-
 bbnegllike <- function(guess, Yvec, ntrials=20){
   
   pos.guess <- exp(guess)
@@ -58,33 +72,23 @@ bbnegllike <- function(guess, Yvec, ntrials=20){
   return(-sum(bbnegll.vec))
   
 }
+```
 
-# As an example
-
-n <- 30
-a <- 2 #true value of a
-b <- 5 # true value of b
-ntrials <- 20
-
-# We randomly sample a value of p from a beta distribution for each individual using the true parameters a and b
-P <- rbeta(n=n, shape1=a, shape2=b)
-# And we calculate the survival for the individuals based on the that probability P following a binomial model.
-YgP <- rbinom(n=n, size=ntrials, prob=P)
-
+```{r}
 
 # Using the function described above and the sample data from Y given P
-myguess <- log(c(1.5,4))
-opt.samp <- optim(par=myguess, fn=bbnegllike, method="Nelder-Mead", Yvec=YgP, ntrials=ntrials)
+myguess <- log(c(1.5,4)) # My guess for the parameters a and b
+opt.samp <- optim(par=myguess, fn=bbnegllike, method="Nelder-Mead",
+                  Yvec=YgP, ntrials=ntrials)
 a.hat <- exp(opt.samp$par[1])
 b.hat <- exp(opt.samp$par[2])
 
-# These are the estimates for the parameters a and b, based on the data we provided.
-print(a.hat)
-print(b.hat)
+# These are the estimates for the parameters a and b, based on the data we provided, and we can compare those to the true values we used for simulating the data
+knitr::kable(data.frame(a.hat = a.hat, a = a, b.hat = b.hat, b=b))
 ```
 
 
-####  Now, using MCMC:  first a Bayesian approach.  
+#  Now, using MCMC:  first a Bayesian approach.  
 Then Data Cloning which includes the Bayesian results as a special case
 
 
