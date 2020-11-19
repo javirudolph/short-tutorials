@@ -13,12 +13,12 @@ knitr::opts_chunk$set(eval= TRUE)
 library("extraDistr")
 library("MASS")
 
-# library(rjags)
-# library(parallel)
-# library(dclone)
-# library(abind)
-# library(R2WinBUGS)
-# library(RCurl)
+library(rjags)
+library(parallel)
+library(dclone)
+library(abind)
+library(R2WinBUGS)
+library(RCurl)
 ```
 
 This is an example of binomial survival, where we follow the fate of $n$ individuals during a single time interval. We let $X = \text{number of survivors}$ be binomially distributed:
@@ -83,18 +83,17 @@ opt.samp <- optim(par=myguess, fn=bbnegllike, method="Nelder-Mead",
 a.hat <- exp(opt.samp$par[1])
 b.hat <- exp(opt.samp$par[2])
 
-# These are the estimates for the parameters a and b, based on the data we provided, and we can compare those to the true values we used for simulating the data
+# These are the estimates for the parameters a and b, based on the data we provided
+# We can compare them to the true values we used for simulating the data
 knitr::kable(data.frame(a.hat = a.hat, a = a, b.hat = b.hat, b=b))
 ```
 
 
-#  Now, using MCMC:  first a Bayesian approach.  
+# Using MCMC:  first a Bayesian approach.  
 Then Data Cloning which includes the Bayesian results as a special case
+The first thing to do is to put together a function with the posterior calculations that needs to be sent to JAGS.  This function is written in  JAGS language 
 
-
-#####  The first thing to do is to put together a function with the posterior calculations that needs to be sent to JAGS.  This function is written in  JAGS language 
-
-```{r eval = FALSE}
+```{r}
 beta.binom <- function(){
   
   # needs:
@@ -121,7 +120,11 @@ beta.binom <- function(){
 
 }
 
+```
 
+So now, using the same data that we simulated before, we use a Bayesian approach to estimate the parameters of interest. 
+
+```{r}
 
 out.parms <- c("a","b", "Prand")
 jags.list <- list(Y=YgP, len=n, ntrials=ntrials, mu.prior=0, precis.prior=0.00001)
@@ -129,20 +132,22 @@ jags.list <- list(Y=YgP, len=n, ntrials=ntrials, mu.prior=0, precis.prior=0.0000
 bayesian.fit <- jags.fit(jags.list, params=out.parms, model=beta.binom, 
                          n.chains=3, n.adapt=3000, n.update=1000, n.iter=30000, thin=10)
 
-quartz()
-plot(bayesian.fit)
+```
 
+The output of the object `bayesian.fit` is a list of 3 chains. This is estimating parameters a, b, and the random P that gets drawn from the beta distribution.
+```{r fig.height=12}
+plot(bayesian.fit)
+```
+
+```{r}
 summary(bayesian.fit)
 
 ```
 
-#####  Wed 14th October 2020
-* Now implementing "Data Cloning", use uniform priors
-* The key difference is entering the replicated (cloned) data
-* How do you do that, well, you simply copy the data 'K' times
-* If K=1, the results correspond to a Bayesian analysis, and as K grows large, the resulting posterior converges to a MVNorm  whose mean is equal to the MLEs and variance is equal to (1/K)*Inverse(Fisher's info)
+# Implementing "Data Cloning", use uniform priors
+The key difference is entering the replicated (cloned) data. How do you do that? well, you simply copy the data 'K' times. If K=1, the results correspond to a Bayesian analysis, and as K grows large, the resulting posterior converges to a MVNorm whose mean is equal to the MLEs and variance is equal to (1/K)*Inverse(Fisher's info)
 
-```{r eval = FALSE}
+```{r}
 DC.beta.binom <- function(){
   
   # needs:
@@ -173,8 +178,8 @@ DC.beta.binom <- function(){
 ```
 
 
-
-```{r eval = FALSE}
+Simulating data again, although I don't think this is necessary since we've already simulated this data in the first section of this document. 
+```{r}
 ##### Simulating data:
 n <- 30
 a <- 2
@@ -186,8 +191,8 @@ YgP <- rbinom(n=n, size=ntrials, prob=P)
 ```
 
 
-######  Bayesian fit ######
-```{r eval = FALSE}
+## Bayesian fit, K = 1 
+```{r}
 K <- 1
 prior.low <- 0
 prior.high <- 100
@@ -197,22 +202,16 @@ dc.list <- list(Y=Ymat, len=n, ntrials=ntrials, low.prior=prior.low, high.prior=
 bayesian.fit <- jags.fit(dc.list, params=out.parms, model=DC.beta.binom, 
                          n.chains=3, n.adapt=3000, n.update=1000, n.iter=30000, thin=10)
 summary(bayesian.fit)[[1]]
-quartz();
+
 plot(bayesian.fit)
 
 Cred.Ints <- apply(bayesian.fit[[1]], 2,FUN=function(x){quantile(x,probs=c(0.025,0.5,0.975))})
 ```
 
 
+### STRAIGHT UP NUMERICAL OPTIMIZATION MLE ESTIMATION 
 
-|summary(bayesian.fit)[[1]]
-|Mean     |  SD  Naive | SE Time-series | SE
-|a |15.17232 | 11.52577 | 0.1214923     | 0.9771369
-|b |27.64400 | 20.80529 | 0.2193070     | 1.7889511
-
-###### STRAIGHT UP NUMERICAL OPTIMIZATION MLE ESTIMATION ######
-
-```{r eval = FALSE}
+```{r}
 myguess <- log(c(1.5,4))
 opt.samp <- optim(par=myguess, fn=bbnegllike, method="Nelder-Mead", Yvec=YgP, ntrials=ntrials)
 a.hat <- exp(opt.samp$par[1])
@@ -221,13 +220,10 @@ print(a.hat)
 print(b.hat)
 ```
 
-#> print(a.hat)
-#[1] 5.284635
-#> print(b.hat)
-#[1] 9.650745
 
 #------------------------------------------------------
-```{r eval = FALSE}
+## Data cloning with K=32
+```{r}
 
 K <- 32
 prior.low <- 0
@@ -238,18 +234,12 @@ dc.list <- list(Y=Ymat, len=n, ntrials=ntrials, low.prior=prior.low, high.prior=
 ml.fit <- jags.fit(dc.list, params=out.parms, model=DC.beta.binom, 
                          n.chains=3, n.adapt=4000, n.update=1000, n.iter=50000, thin=10)
 summary(ml.fit)[[1]]
-quartz();
+
 plot(ml.fit)
 ```
 
-
-#> summary(ml.fit)[[1]]
-#Mean        SD    Naive SE Time-series SE
-#a 5.381547 0.4683129 0.003823759     0.01139962
-#b 9.828958 0.8579340 0.007005002     0.02080979
-
 ########  Wald Confidence Intervals ########
-```{r eval = FALSE}
+```{r}
 
 kth.post <- ml.fit[[1]]
 mles <- apply(kth.post, 2,mean)
@@ -276,12 +266,15 @@ print(Cred.Ints)
 #####               = \int (h(x)/f(x))*f(x) dx
 #####              == E[(h(x)/f(x))] with respect of the distribution f(x)
 
+$$\int h(x)dx  = \int h(x) \frac{f(x)}{f(x)} dx$$
+$$               = \int \frac{h(x)}{f(x)}\times f(x) dx $$
+$$            == E\left[\frac{h(x)}{f(x)} \right] \text{with respect of the distribution} f(x)$$
 
 # Example of Monte Carlo integration
 # Say I need to compute Var(Y), where Y~exp(lambda=3).
 # Var(Y) = I = int_{0}^{Infty} (y-(1/lambda))^2 *lambda*exp(-y*lambda) dy
 
-```{r eval = FALSE}
+```{r}
 # First, set the value of lambda
 lam <- 3
 nsamps <- 1000000
@@ -304,13 +297,9 @@ mean(mc.integrand)# LLN
 #---------------------------------------------------------------
 
 
-######  Now, obtaining MCMC samples from the distribution of the hidden process
-######  given the observations.  If f(y|x) is the likelihood and g(x;theta) is the
-######  hidden process, then this posterior distribution is
-######  h(x|y;theta) \propto f(y|x)g(x;theta)
-######  which we can sample from using a simple MCMC run.
+Now, obtaining MCMC samples from the distribution of the hidden process given the observations.  If $f(y|x)$ is the likelihood and $g(x;theta)$ is the hidden process, then this posterior distribution is $h(x|y;theta) \propto f(y|x)g(x;theta)$ which we can sample from using a simple MCMC run.
 
-```{r eval = FALSE}
+```{r}
 
 Kalman.beta.binom <- function(){
   
@@ -334,22 +323,19 @@ Kalman.beta.binom <- function(){
 
 ```
 
-```{r eval = FALSE}
+```{r}
 
 out.parms <- c("Prand")
 kalman.list <- list(Y=YgP, len=n, ntrials=ntrials, a=mles[1], b=mles[2])
 kalman.samps <- jags.fit(kalman.list, params=out.parms, model=Kalman.beta.binom, 
                    n.chains=3, n.adapt=4000, n.update=1000, n.iter=50000, thin=10)
 summary(kalman.samps)
-quartz();
 plot(kalman.samps)
-#save.image("BetaBinom-Up2Kalman.RData")
 ```
 
 
 
-```{r eval = FALSE}
-
+```{r}
 
 bo <- 1.5
 b1 <- 2
@@ -394,7 +380,6 @@ binom.Ho <- function(m1,p1){
   N.vec <- m1+p1
   
   llike <- dbinom()
-  
   
   
 }
