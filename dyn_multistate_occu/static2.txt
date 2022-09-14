@@ -1,0 +1,59 @@
+
+    model {
+    # Priors for each year (you will notice these are the same as single season, but now with a t index)
+    for (t in 1:nyears) {
+      psi[t] ~ dunif(0,1)
+      r[t] ~ dunif(0,1)
+      p2[t] ~ dunif(0,1)
+      #Multinomial logit link
+      lp32[t] ~ dnorm(0, 0.001)
+      lp33[t] ~ dnorm(0, 0.001)
+      p32[t] <- exp(lp32[t]) / (1 + exp(lp32[t]) + exp(lp33[t]))
+      p33[t] <- exp(lp33[t]) / (1 + exp(lp32[t]) + exp(lp33[t]))
+      p31[t] <- 1-p32[t]-p33[t]
+    }
+
+    # Define initial state vector Omega for each year
+    for (t in 1:nyears) {
+      Omega[t,1] <- 1 - psi[t]
+      Omega[t,2] <- psi[t] * (1-r[t])
+      Omega[t,3] <- psi[t] * r[t]
+    }
+
+    # Define observation matrix for each year
+    # The order of the indices is true state, year, observed state
+    for (t in 1:nyears) {
+      Theta[1,t,1] <- 1
+      Theta[1,t,2] <- 0
+      Theta[1,t,3] <- 0
+      Theta[2,t,1] <- 1-p2[t]
+      Theta[2,t,2] <- p2[t]
+      Theta[2,t,3] <- 0
+      Theta[3,t,1] <- p31[t]
+      Theta[3,t,2] <- p32[t]
+      Theta[3,t,3] <- p33[t]
+    }
+
+    # State-space likelihood
+    # Define separate parameters of state and observation equation for each year
+    for (t in 1:nyears) {
+      for (i in 1:nsites) {
+      z[i,t] ~ dcat(Omega[t,])  # This is the state equation
+        for (j in 1:nsurveys) {
+          y[i,j,t] ~ dcat(Theta[z[i,t],t,]) # Observation equation
+        }
+      }
+    }
+
+    # Derived quantities
+    for (t in 1:nyears) {
+      for (i in 1:nsites) {
+        occ1[i,t] <- equals(z[i,t], 1)
+        occ2[i,t] <- equals(z[i,t], 2)
+        occ3[i,t] <- equals(z[i,t], 3)
+      }
+      n.occ[t,1] <- sum(occ1[,t])
+      n.occ[t,2] <- sum(occ2[,t])
+      n.occ[t,3] <- sum(occ3[,t])
+    }
+}

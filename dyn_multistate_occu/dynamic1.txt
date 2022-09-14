@@ -1,0 +1,81 @@
+
+    model {
+
+      #Priors
+      psi ~ dunif(0,1)
+      r ~ dunif(0,1)
+
+      for (s in 1:3) {
+        phi[s] ~ dunif(0,1)
+        rho[s] ~ dunif(0,1)
+      }
+
+      p2 ~ dunif(0,1)
+
+      for (s in 1:3) {
+        beta[s] ~ dgamma(1, 1)
+        p3[s] <- beta[s] / sum(beta[])
+      }
+
+      # Define initia state vector
+      Omega[1] <- 1 - psi
+      Omega[2] <- psi * (1-r)
+      Omega[3] <- psi * r
+
+      # Define transition matrix
+      PhiMat[1,1] <- 1 - phi[1]
+      PhiMat[1,2] <- phi[1] * (1 - rho[1])
+      PhiMat[1,3] <- phi[1] * rho[1]
+
+      PhiMat[2,1] <- 1 - phi[2]
+      PhiMat[2,2] <- phi[2] * (1 - rho[2])
+      PhiMat[2,3] <- phi[2] * rho[2]
+
+      PhiMat[3,1] <- 1 - phi[3]
+      PhiMat[3,2] <- phi[3] * (1 - rho[3])
+      PhiMat[3,3] <- phi[3] * rho[3]
+
+      # Define observation matrix
+      Theta[1,1] <- 1
+      Theta[1,2] <- 0
+      Theta[1,3] <- 0
+      Theta[2,1] <- 1-p2
+      Theta[2,2] <- p2
+      Theta[2,3] <- 0
+      Theta[3,1] <- p3[1]
+      Theta[3,2] <- p3[2]
+      Theta[3,3] <- p3[3]
+
+      # State-space likelihood
+      for (i in 1:nsites) {
+        z[i,1] ~ dcat(Omega[])
+      }
+
+      for (i in 1:nsites) {
+        for (t in 1:(nyears-1)) {
+          z[i,t+1] ~ dcat(PhiMat[z[i,t],])
+        }
+      }
+
+      for (t in 1:nyears) {
+        for (i in 1:nsites) {
+          for (j in 1:nsurveys) {
+            y[i,j,t] ~ dcat(Theta[z[i,t],])
+          }
+        }
+      }
+
+
+      # Derived quantities
+      for (t in 1:nyears) {
+        for (i in 1:nsites) {
+          occ1[i,t] <- equals(z[i,t], 1)
+          occ2[i,t] <- equals(z[i,t], 2)
+          occ3[i,t] <- equals(z[i,t], 3)
+        }
+        n.occ[t,1] <- sum(occ1[,t])
+        n.occ[t,2] <- sum(occ2[,t])
+        n.occ[t,3] <- sum(occ3[,t])
+      }
+    }
+    

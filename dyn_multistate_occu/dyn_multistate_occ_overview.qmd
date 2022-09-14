@@ -1,0 +1,869 @@
+---
+title: "Dynamic Multistate Occupancy Model"
+subtitle: "Calling this a self tutorial"
+author: "javirudolph"
+format:
+  html:
+    toc: true
+    toc-location: left
+    toc-depth: 4
+---
+
+# Source  
+
+I am following the Kery and Royle book, [Applied hierarchical modeling in Ecology](https://www.sciencedirect.com/book/9780128237687/applied-hierarchical-modeling-in-ecology-analysis-of-distribution-abundance-and-species-richness-in-r-and-bugs), Vol 2, Chapter 6. I am basically writing this document so that I understand what is going on in the book, and adapt it to my own work with bats. So, my references here will be to bats instead of birds, but I have deviated very little from the overall text in the book.
+
+# Introduction  
+
+In multi-state models you distinguish between two or more states of an occupied site. For us, this means that each site (10x10 km grid) has multiple states: 
+-   Unoccupied or empty 
+-   Occupied by a few bats 
+-   Occupied by many bats 
+
+I imagine that if we wanted to add complexity, we could have occupied sites divided also between those with detected Pd or not, but for now, we will stick to having no bats, a few bats, many bats (states 1, 2, and 3). 
+
+The difference between a static and a dynamic model is that the first one estimates how sites are distributed among those different states, whereas for a dynamic model we also estimate a state transition probability matrix, which basically describes how each site goes from one state to another. It is this time dependency that is different. Below, when we fit the models to the simulated data, the static model will estimate parameters for each season, whereas the dynamic one will estimate those parameters as well, in addition to the parameters associated to how sites change from one season to another. 
+
+Dynamic multi-state models typically represented as state-space models: observation model, initial state, and probabilistic rule of how it changes over time in a Markovian manner (in our case dependency only on the last year, so not a full history dependence):  
+
+1.    initial state vector *Omega* ($\Omega$)  
+2.    state transition probability matrix *Phi* ($\Phi$)  
+3.    observation matrix *Theta* ($\Theta$)  
+
+# Deriving the multi-state occupancy model 
+
+**Question for experts: what would be the number of bats we are associating to these few bats and many bats? **
+
+We have three different states, or two states of occupancy: *unoccupied* (coded as 1), *few bats* (coded as 2), *many bats* (coded as 3). For the observation data we will use $y_{i,j,t}$ where $i$ sites are identified ($i = 1\dots M$) and $j$ is the index for surveys ($j = 1\dots J$), and $t$ for time or year in our case ($t = 1\dots T$). Keep in mind that $y$ are observed states, and the *true* state for each site is denoted by $z$, which is modeled as a latent variable in the state model. The relationship between the true and observed states is described by the observation model.  
+
+To model the different occupancy states we use a Multinomial distribution, and for the first season of the dynamic model the state of a site is: 
+$$
+z_i \sim Categorical(\Omega_i)
+$$
+where the state vector for site $i$ ($\Omega_i$) has the probabilities with which site $i$ is in any of the three states described above: 
+
+$$ 
+\Omega_i = [\phi_1 \quad \phi_2 \quad \phi_3]_i,
+$$
+and so the probability of site $i$ being in state $s$ is given by $\phi_s$. Given that these are all probabilities, they are all values between 0 and 1, and together they sum up to 1. This means that we can express them in terms of another or reparameterize. This is necessary later on to reduce the number of parameters we estimate. 
+
+The observation model is able to link the true and observed state, and so it is also expressed as a Categorical distribution, conditional on the true state of the site. We write this:
+
+$$
+y_{i,j,t} | z_{i,t} \sim Categorical(\Theta_{z_i, o_{i,j}, i, j, t})
+$$
+
+The observation array ($\Theta_{z_i, o_{i,j}, i, j, t}$) has five dimensions: the true state of site $i$ ($z_i$), the observed state for the same site at survey $j$ ($o_{i,j}$), the site $i$, the survey $j$, and the year $t$. We can map the first two dimensions, which are probabilities, where the **rows correspond to the true states, and the columns correspond to the observed states** for a specific site, survey, and year ($i,j,t$): 
+
+$$
+\Theta_{z, o, i, j, t} = \begin{bmatrix}
+                          p_{11} & p_{12} & p_{13}\\
+                          p_{21} & p_{22} & p_{23}\\
+                          p_{31} & p_{32} & p_{33}
+                          \end{bmatrix}_{i,j,t}
+$$
+
+And so $p_{11}$ is the probability that an *unoccupied* site is observed as *unoccupied*. Similarly, $p_{23}$ is the probability that a site occupied by *few bats* (state 2) is observed as occupied by *many bats* (state 3); *this actually doesn't make sense and so would be a zero*. Additionally, $p_{12}$ and $p_{13}$ are false-positive probabilities (if the site is unoccupied, then you wouldn't be able to observe few or many bats). We can simplify this matrix as follows: 
+
+$$
+\Theta_{z, o, i, j, t} = \begin{bmatrix}
+                          1 & 0 & 0\\
+                          1-p_{2} & p_{2} & 0\\
+                          1-p_{32}-p_{33} & p_{32} & p_{33}
+                          \end{bmatrix}_{i,j,t}
+$$
+
+However, if we think about more complex models, with more states, this way of simplifying might not be as useful. Alternatively, we can reparameterize that last row as a conditional Binomial, where $p_3$ is the probability of detecting any occupation at a site with many bats, and $\delta$ is the conditional probability of detecting *many bats* given detection:
+
+$$
+\Theta_{z, o, i, j, t} = \begin{bmatrix}
+                          1 & 0 & 0\\
+                          1-p_{2} & p_{2} & 0\\
+                          1-p_{3} & p_{3}(1-\delta) & p_{3}\delta
+                          \end{bmatrix}_{i,j,t}
+$$
+
+The last parameter here at [3,3] now reads that the probability of detecting many bats in a site with many bats ($p_3 \delta$) is the probability of detecting  bats at that site ($p_3$), and that we detect *many bats* ($\delta$). Also, $p2$ is the probability that we detect a *few bats* at a site that is occupied by a few bats. 
+
+
+Next, we describe the dynamics of the model by writing down the state transition probabilities (example would be a site going from unoccupied to having many bats from year 0 to year 1). For every transition at $t = 2\dots T$, it depends on the previous year, and for every site we have: 
+
+$$
+z_{i,t}|z_{i,t-1}\sim \Phi_{z{(t-1)}, z{(t)}, i,t}
+$$
+where the transition matrix is described by $\Phi$ (Phi). Keep in mind that the $j$ index is gone, because we are talking about *true* states here.
+
+$$
+\Phi_{z{(t-1)}, z{(t)}, i,t} =  \begin{bmatrix}
+                                \pi_{11} & \pi_{12} & \pi_{13} \\
+                                \pi_{21} & \pi_{22} & \pi_{23} \\
+                                \pi_{31} & \pi_{32} & \pi_{33}
+                                \end{bmatrix}_{i,t}
+$$
+we can read $\pi_{n,m,i,t}$ as the probability that site $i$ transitions from state $n$ in year $t-1$ to state $m$ in year $t$. And we can also reparameterize this matrix. 
+
+$$
+\Phi_{z{(t-1)}, z{(t)}, i,t} =  \begin{bmatrix}
+                                1-\phi_1 & \phi_1(1-\rho_1) & \phi_1\rho_1 \\
+                                1-\phi_2 & \phi_2(1-\rho_2) & \phi_2\rho_2 \\
+                                1-\phi_3 & \phi_3(1-\rho_3) & \phi_3\rho_3
+                                \end{bmatrix}_{i,t}
+$$
+
+
+Similarly as we did before, we want to simplify this matrix and reparameterize using another conditional binomial. We focus on having $\phi_x$ (phi) be the probability that site $i$ in state $x$ in year $t-1$ is occupied in year $t$, and $\rho_x$ (rho) as the conditional probability that an occupied site has *many bats* (third state), not just a few, given that it was in state $x$ last year. In other words, $\phi$ is the probability of going from any state to being occupied, and $\rho$ is the probability that an occupied site has many bats this year given it has a few or many bats last year. As an example $\phi_2(1-\rho_2)$ is the probability that a site that was occupied by a few bats last year is still occupied this year ($\phi_2$), and that given it is still occupied this year, that it has only a few bats ($1-\rho_2$) instead of many bats ($\rho_2$).
+
+And we go back to this, where the observations are dependent on the underlying state, and that underlying state is dependent on the state of the previous year: 
+
+$$
+y_{i,j,t} | z_{i,t} \sim Categorical(\Theta_{z_i, o_{i,j}, i, j, t})
+$$
+
+The observation at a given site, survey, and year is conditional on the true state of that site in that year.
+
+# Simulation  
+
+## Simplest case: no dependency of parameters on site, survey, or year 
+
+### Model description  
+
+Simulate data with three latent occupancy and three observation states, where the observation and transition matrices remain constant and are the same for all sites. 
+
+**True state** on the initial year ($z_{i,t}$) where $t=1$. Here, for each site, the initial state is drawn according to the probabilities specified in $\Omega$. So, the probability that a site in year 1 will be occupied ($\psi$), and will also have many bats ($r$) is determined by their product $\psi r$. 
+
+$$
+z_{i,1}\sim Categorical(\Omega), \text{with} \quad \Omega = [1-\psi \quad \psi(1-r) \quad \psi r]
+$$
+
+**Incorporating time** with the transition matrix Phi ($\Phi$). Notice the lack of sub indices for the matrix. This means that we use that same matrix for all years, meaning that the probability for sites to go from one state to another is the same every year. For example, if at year 3 we were to add bat boxes to empty sites to encourage a few bats moving in, then our transition matrix from year 3 might be different to the transition matrix in other years. In the case of year 3, we might change the values for $\phi_1$ since we will be increasing th probability that unoccupied sites will be occupied the next year.  
+
+$$
+z_{i,t}|z_{i,t-1} \sim Categorical(\Phi_{z{(t-1)}, z{(t)}}),
+\text{with} \quad
+\Phi_{z{(t-1)}, z{(t)}} =  \begin{bmatrix}
+                                1-\phi_1 & \phi_1(1-\rho_1) & \phi_1\rho_1 \\
+                                1-\phi_2 & \phi_2(1-\rho_2) & \phi_2\rho_2 \\
+                                1-\phi_3 & \phi_3(1-\rho_3) & \phi_3\rho_3
+                                \end{bmatrix}
+$$
+
+**Observations** are also not dependent on site, survey or year. So essentially, the probability that we observe a site given it's latent state will remain the same. But, as an example, if we were to get more sensitive acoustic equipment that allows for better detection of a few bats, then perhaps our $p2$ would increase for those sites and years that have the more sensitive equipment.
+
+
+$$
+y_{i,j,t}|z_{i,t} \sim Categorical(\Theta_{z,o}), \text{with} \quad
+\Theta_{z, o} = \begin{bmatrix}
+                          1 & 0 & 0\\
+                          1-p_{2} & p_{2} & 0\\
+                          1-p_{32}-p_{33} & p_{32} & p_{33}
+                          \end{bmatrix}
+$$
+
+### Pick parameters 
+
+We pick parameters for *initial conditions first*, associated to $\Omega$, thus we need to set $\psi$ and $r$ (To refresh 
+$\Omega = [1-\psi \quad \psi(1-r) \quad \psi r]$) to determine the probability of a site being empty, having a few bats, or many bats on the first year:  
+
+```{r}
+psi <- 0.5    # Expected proportion of occupied sites
+r <- 0.3      # Proportion of those occupied sites that have many bats (third state)
+```  
+
+
+Set parameters for the *transition matrix* ($\Phi$). When we reparameterize, we set $\phi_X$ as the probability of becoming occupied given the site was in any of the three states the previous year, which is why we have three different probabilities; therefore, $\phi_1$ is the probability of becoming occupied given that the site was empty last year. For $\rho_2$ we would have the probability of having many bats this year given that last year the occupied site had a few bats.    
+
+```{r}
+# Probability of becoming occupied
+phi <- c(0.2, # If the site was empty last year
+         0.5, # If the site had a few bats last year
+         0.9) # If the site had many bats last year
+
+# Probability of having many bats if the site becomes occupied
+rho <- c(0.1, # Very unlikely. If the site last year was empty, chance of it becoming occupied with many bats is kind of low
+         0.25,
+         0.89)   
+``` 
+
+Set parameters for the **observation matrix** ($\Theta$): 
+
+```{r}
+p2 <- 0.5   # Detection probability for a site with a few bats
+p32 <- 0.2  # Classification probability of a site with many bats to be classified as with few bats
+p33 <- 0.8  # Classification prob. of a site with many bats as having many bats
+```
+
+### Assembling 
+
+First, we can create our initial state probability vector ($\Omega = [1-\psi \quad \psi(1-r) \quad \psi r]$):  
+
+```{r}
+Omega <- c(1-psi, psi*(1-r), psi*r)
+Omega
+```
+which reads that the probability of a site's initial state being *unoccupied* is `r Omega[1]`, the probability of it being occupied by a *few bats* is `r Omega[2]`, and the probability of it being occupied by *many bats* is `r Omega[3]`. All for the first year.  
+
+Then, we build the transition matrix ($\Phi$):
+
+::: {.column-margin}
+$$
+\Phi_{z{(t-1)}, z{(t)}} =  \begin{bmatrix}
+                                1-\phi_1 & \phi_1(1-\rho_1) & \phi_1\rho_1 \\
+                                1-\phi_2 & \phi_2(1-\rho_2) & \phi_2\rho_2 \\
+                                1-\phi_3 & \phi_3(1-\rho_3) & \phi_3\rho_3
+                                \end{bmatrix}
+$$
+:::
+
+```{r}
+Phi <- matrix(
+  c(1-phi[1], phi[1]*(1-rho[1]), phi[1]*rho[1],
+    1-phi[2], phi[2]*(1-rho[2]), phi[2]*rho[2],
+    1-phi[3], phi[3]*(1-rho[3]), phi[3]*rho[3]), ncol = 3, byrow = TRUE)
+Phi
+``` 
+
+The transition matrix also tells us the probability of a site staying the same, for example being *unoccupied* on year $t$ given that it was *unoccupied* on year $t-1$ is described by the (1,1) location on the matrix, (`r Phi[1,1]`).
+
+And, our observation matrix ($\Theta$):
+
+::: {.column-margin}
+$$
+\Theta_{z, o} = \begin{bmatrix}
+                          1 & 0 & 0\\
+                          1-p_{2} & p_{2} & 0\\
+                          1-p_{32}-p_{33} & p_{32} & p_{33}
+                          \end{bmatrix}
+$$
+::: 
+
+
+```{r}
+Theta <- matrix(
+  c(
+    1, 0, 0,
+    1-p2, p2, 0,
+    1-p32-p33, p32, p33
+  ), ncol = 3, byrow = TRUE
+)
+Theta
+```
+
+### Simulation  
+
+We will run a short simulation:
+
+```{r}
+nsites <- 40     # Equivalent to "M"
+nsurveys <- 4    # ... "J"
+nyears <- 8       # ... "T"
+``` 
+
+#### Empty arrays  
+
+Here, we build empty arrays to hold all the information, one for the latent states ($z$) and another for observations ($y$): 
+
+```{r}
+z <- array(NA, dim = c(nsites, nyears))
+head(z) # every column is the year, and every row the site
+
+y <- array(NA, dim = c(nsites, nsurveys, nyears))
+head(y) # here we have three dimensions. 
+# An array for every year separately, where each column is the survey, and rows are sites.
+```
+
+#### Initial states Y1  
+
+So, what we want to do now is fill these arrays with  numbers based on the probability values we set earlier, using a multinomial distribution and the probabilities we calculated for the initial state, transition, and observation matrices. As an example, we take the first year using the initial state vector $\Omega$ (Omega):
+
+```{r}
+rdraw <- rmultinom(nsites, 1, Omega)
+rdraw
+```
+
+In the code above, each column represents a site (with a total of `r nsites`), and each row is the state. Thus, the firs row corresponds to *unoccupied*, second row for *few bats*, and third row for *many bats*. For this first year, the probability that each site falls under one of those states is given by $\Omega$, that if we remember from above was a vector length three (one probability for each state) with the values `r Omega`
+
+
+```{r}
+# This function is built in the book but I couldn't understand it at first. 
+# It basically asks, in which row is the number 1, versus the zeroes.
+# So we know the state for that site
+get1<- function(x) which(x==1)
+set.seed(1)
+# In this case, each site has the row number 
+# that corresponds to the state of the site (unoccupied, few bats, many bats)
+# we save this as the first column in our z array
+z[,1] <- apply(rdraw, 2, FUN = get1)
+z[,1]
+```
+
+Let's take a loot just at the first few sites so we can compare: 
+
+```{r}
+rdraw[,1:5]
+z[1:5,1]
+```
+
+
+And also, since we have only done the first year, all the other years should be NAs:
+
+```{r}
+head(z)
+```
+
+#### States Z matrix  
+
+**Fill in the true state for other years**, but this time, we need to incorporate the state of the previous year. I am breaking up the code a little to explain it to myself. Take as an example the first site and second year:
+
+```{r}
+i <- 1 # site 1
+t <- 2 #second year
+```
+
+And remember the transition probability matrix:  
+
+```{r}
+Phi # Transition probability matrix
+```  
+
+Now, find the state for the first site last year (on year 1): 
+
+```{r}
+z[i, t-1] # the true state for site i last year
+```  
+
+Given the state of that site last year, what are the probabilities of that site either staying the same or transitioning to the other two states: 
+
+```{r}
+Phi[z[i, t-1],] # the vector of transition probabilities for a given state
+```
+
+Now, we use those probabilities (of the site staying the same or transitioning to other states) to sample from a multinomial distribution and figure out what happens next:
+
+```{r}
+year_t <- rmultinom(1,1, Phi[z[i, t-1],])
+year_t
+```
+and we use the same function as before so it categorizes this as a 1, 2, or 3, for the site, depending on its true state,
+
+```{r}
+get1(year_t)
+```
+**We can do this for all the sites and years** using a for loop:
+
+```{r}
+
+for(i in 1:nsites){
+  for(t in 2:nyears){
+    z[i,t] <- get1(rmultinom(1, 1, Phi[z[i, t-1],]))
+  }
+}
+
+head(z)
+```
+
+
+#### Observations Y matrix
+
+Finally, we get to **the observations**. Remember that each observation is conditional on the true underlying state ($z$, what we just simulated above). We use the observation matrix ($\Theta$) here. Later on, these probabilities for the observation matrix depend on different detection covariates. To refresh, we set the observation matrix to:
+
+```{r}
+Theta
+```
+First row reads *that the probability of observing a site as unoccupied, given that it's true state is unoccupied equals 1*. The second row then says that given that a site has a *few bats*, we can either observe it as unoccupied or as occupied by a few bats with a 50:50 chance. And finally, the third row, for a site with *many bats*, the probability of observing no bats is `r Theta[3,1]`, of observing a few bats is `r Theta[3,2]`, or observing many bats is `r Theta[3,3]`.  
+
+As an example then, if we consider the first site on the first year
+
+```{r}
+z[1,1]
+```
+then, we ask, what is the probability of seeing no bats, few bats, or many bats, given that the true underlying state is many bats?
+
+```{r}
+Theta[z[1,1],]
+```
+and so, the realization of this random process for the `r nsurveys` surveys would look like: 
+
+```{r}
+surveydraw <- rmultinom(nsurveys, 1, Theta[z[1,1],])
+surveydraw
+```
+We do this for all sites and years:  
+
+```{r}
+for(i in 1:nsites){
+  for(t in 1:nyears){
+    y[i,,t] <- apply(rmultinom(nsurveys, 1, Theta[z[i,t],]), 2, get1)
+  }
+}
+
+# Example of the first site
+
+y[1,,]
+```
+
+
+### Explore 
+
+We can explore some sites, for example below you will see the state during the five years for the first six sites:
+
+```{r}
+head(z)
+```
+
+we can focus on the second row, site 2, and we see that for the first two years the site had (*a few bats*), then on years three and four, it gets occupied by *many bats* and year five through seven, there's a decline to no bats, and then the last year we have a few bats again.  
+
+Our observations for site 2 are shown below, where each row is a survey, and the columns correspond to each year. If we had perfect detection, each row should look the same as the second row in the matrix above.
+
+```{r}
+y[2,,]
+```
+
+
+
+# Model fitting  
+
+## Static single-season 
+
+### Model description
+
+So, in this case we are only taking data from the first year, which means no estimating parameters of the transition matrix, etc. We basically just take a snapshot and we care about estimating the parameters associated to the state and the observation. The question it asks is, what is the occupancy for a site now? I think this is what it does:  
+
+The underlying true state: 
+$$
+z_i \sim Categorical(\Omega) \quad \text{with} \quad \Omega = [1-\psi \quad \psi(1-r) \quad \psi r]
+$$
+
+And the observations given that state for each site: 
+$$
+y_i|z_i \sim Categorical(\Theta) \quad \text{with} \quad
+\Theta_{z, o} = \begin{bmatrix}
+                          1 & 0 & 0\\
+                          1-p_{2} & p_{2} & 0\\
+                          1-p_{32}-p_{33} & p_{32} & p_{33}
+                          \end{bmatrix}
+$$
+If you count the number of parameters here, I think we are trying to estimate only 5: $\psi$, $r$, $p_2$, $p_{32}$, $p_{33}$ , since $p_{31} = 1-p_{32}-p_{33}$. 
+
+The model to fit this uses a Gaussian prior for the logit of $p32$ and $p33$ so that it allows for the modeling of covariates (which we are not doing here) but it would look like this: 
+
+The priors: 
+
+$$
+lp_{32} \sim Normal(0,0.001)\\
+lp_{33} \sim Normal(0,0.001)
+$$
+The multinomial link:
+
+$$
+p_{32} = \exp(lp_{32})/(1+\exp(lp_{32}) + \exp(lp_{33})) \\
+p_{33} = \exp(lp_{33})/(1+\exp(lp_{32}) + \exp(lp_{33}))
+$$
+So that we could do GLM type things: 
+
+$$
+lp_{32} = \alpha_1 + \beta_1 * X + \epsilon_1 \\
+lp_{33} = \alpha_2 + \beta_2 * X + \epsilon_2
+$$
+
+### Model code
+
+```{r}
+# Get data for one year
+str(y1 <- y[,,1])
+
+# tabulate observed data for each site
+ttab <- array(0, dim = c(nsites, 3)) # sites by number of states
+colnames(ttab) <- c('nobats', 'fewbats', 'manybats')
+for(i in 1:nsites){
+  tt <- table(y1[i,])
+  ttab[i, as.numeric(names(tt))] <- tt
+}
+
+head(ttab) # guessing sum of the row should be 3, for the three surveys
+
+# compare to the true state and summary of observed states
+head(data.frame('truestate' = z[,1], ttab))
+
+```
+
+Getting to fit the data, lets see if this works or not.  
+
+
+```{r}
+# Bundle data
+str(bdata <- list(y = y1, nsites = nrow(y1), nsurveys = ncol(y1)))
+
+# Specify model
+cat(file = '../dyn_multistate_occu/static1.txt', "
+    model {
+
+    # Priors
+    psi ~ dunif(0,1)
+    r ~ dunif(0,1)
+    p2 ~ dunif(0,1)
+
+    # Multinomial logit link for observation model for state 3 (many bats)
+    lp32 ~ dnorm(0, 0.001)
+    lp33 ~ dnorm(0, 0.001)
+    p32 <- exp(lp32) / (1 + exp(lp32) + exp(lp33))
+    p33 <- exp(lp33) / (1 + exp(lp32) + exp(lp33))
+    p31 <- 1-p32-p33
+
+    # Define initial state vector Omega
+    Omega[1] <- 1 - psi
+    Omega[2] <- psi * (1-r)
+    Omega[3] <- psi * r
+
+    # Define observation matrix
+    Theta[1,1] <- 1
+    Theta[1,2] <- 0
+    Theta[1,3] <- 0
+    Theta[2,1] <- 1-p2
+    Theta[2,2] <- p2
+    Theta[2,3] <- 0
+    Theta[3,1] <- p31
+    Theta[3,2] <- p32
+    Theta[3,3] <- p33
+
+    # State-space likelihood
+    # State equation: the true states
+    for (i in 1:nsites) {
+    z[i] ~ dcat(Omega[])
+    }
+
+    # Observation equation
+    for (i in 1:nsites) {
+      for (j in 1:nsurveys) {
+      y[i,j] ~ dcat(Theta[z[i],])
+      }
+    }
+
+    # Derived quantities
+    for (i in 1:nsites) {
+      occ1[i] <- equals(z[i], 1)
+      occ2[i] <- equals(z[i], 2)
+      occ3[i] <- equals(z[i], 3)
+    }
+    n.occ[1] <- sum(occ1[]) # Total number of sites in state 1
+    n.occ[2] <- sum(occ2[])
+    n.occ[3] <- sum(occ3[])
+
+    }
+    ")
+
+# The previous chunk just gets the model saves as a text file in this directory
+```
+
+
+```{r}
+
+# Initial values
+zst <- rep(3, nrow(bdata$y)) # initialize at highest possible state
+inits <- function() {list(
+  z = zst
+  )}
+
+# Parameters monitored
+params <- c("psi", "r", "p2", "p31", "p32", "p33", "Omega", "Theta", "n.occ")
+
+# MCMC settings
+na <- 1000 ; ni <- 2000 ; nt <- 2 ; nb <- 1000 ; nc <- 3
+
+# Call JAGS
+library(jagsUI)
+out1 <- jags(bdata, inits, params, "../dyn_multistate_occu/static1.txt", n.adapt = na, n.chains = nc, n.thin = nt, n.iter = ni, n.burnin = nb,
+             parallel = TRUE)
+
+```
+### Output figures 
+```{r}
+par(mfrow =c(4,4))
+traceplot(out1)
+```
+
+### Output params
+
+```{r}
+print(out1)
+```
+
+
+## Static Multi-season model  
+
+### Model description 
+
+The next logical step is to consider all the years. So, previously we took only the data for the first year, and now we will use all the years for this, and fit separate parameters for each year. Now, the state for each site varies by year, with year-specific $\psi$ and $r$ parameters, but we don't consider here any transition probabilities. 
+
+The underlying state now has time, so it looks like this: 
+$$
+z_{i,t}\sim Categorical(\Omega_t), \text{with} \quad \Omega_t = [1-\psi_t \quad \psi_t(1-r_t) \quad \psi_t r_t]
+$$
+
+And observations given by: 
+
+$$
+y_{i,j,t}|z_{i,t} \sim Categorical(\Theta_{z,o,i,j,t}), \text{with} \quad
+\Theta_{z, o,i,j,t} = \begin{bmatrix}
+                          1 & 0 & 0\\
+                          1-p_{2}t & p_{2} & 0\\
+                          1-p_{32}-p_{33} & p_{32} & p_{33}
+                          \end{bmatrix}_{i,j,t}
+$$
+
+### Model Code
+
+```{r}
+
+# Bundle data
+
+str(bdata <- list(y = y, nsites = dim(y)[1], nsurveys = dim(y)[2], nyears = dim(y)[3]))
+
+# We specify the model
+
+cat(file = '../dyn_multistate_occu/static2.txt', "
+    model {
+    # Priors for each year (you will notice these are the same as single season, but now with a t index)
+    for (t in 1:nyears) {
+      psi[t] ~ dunif(0,1)
+      r[t] ~ dunif(0,1)
+      p2[t] ~ dunif(0,1)
+      #Multinomial logit link
+      lp32[t] ~ dnorm(0, 0.001)
+      lp33[t] ~ dnorm(0, 0.001)
+      p32[t] <- exp(lp32[t]) / (1 + exp(lp32[t]) + exp(lp33[t]))
+      p33[t] <- exp(lp33[t]) / (1 + exp(lp32[t]) + exp(lp33[t]))
+      p31[t] <- 1-p32[t]-p33[t]
+    }
+
+    # Define initial state vector Omega for each year
+    for (t in 1:nyears) {
+      Omega[t,1] <- 1 - psi[t]
+      Omega[t,2] <- psi[t] * (1-r[t])
+      Omega[t,3] <- psi[t] * r[t]
+    }
+
+    # Define observation matrix for each year
+    # The order of the indices is true state, year, observed state
+    for (t in 1:nyears) {
+      Theta[1,t,1] <- 1
+      Theta[1,t,2] <- 0
+      Theta[1,t,3] <- 0
+      Theta[2,t,1] <- 1-p2[t]
+      Theta[2,t,2] <- p2[t]
+      Theta[2,t,3] <- 0
+      Theta[3,t,1] <- p31[t]
+      Theta[3,t,2] <- p32[t]
+      Theta[3,t,3] <- p33[t]
+    }
+
+    # State-space likelihood
+    # Define separate parameters of state and observation equation for each year
+    for (t in 1:nyears) {
+      for (i in 1:nsites) {
+      z[i,t] ~ dcat(Omega[t,])  # This is the state equation
+        for (j in 1:nsurveys) {
+          y[i,j,t] ~ dcat(Theta[z[i,t],t,]) # Observation equation
+        }
+      }
+    }
+
+    # Derived quantities
+    for (t in 1:nyears) {
+      for (i in 1:nsites) {
+        occ1[i,t] <- equals(z[i,t], 1)
+        occ2[i,t] <- equals(z[i,t], 2)
+        occ3[i,t] <- equals(z[i,t], 3)
+      }
+      n.occ[t,1] <- sum(occ1[,t])
+      n.occ[t,2] <- sum(occ2[,t])
+      n.occ[t,3] <- sum(occ3[,t])
+    }
+}
+")
+
+# Initial values
+zst <- array(3, dim = c(bdata$nsites, bdata$nyears))
+inits <- function() {list(z = zst)}
+
+#Parameters monitored
+params <- c("psi", "r", "p2", "p31", "p32", "p33", "Omega", "Theta", "n.occ")
+
+# MCMC settings
+na <- 1000 ; ni <- 2000 ; nt <- 2 ; nb <- 1000 ; nc <- 3
+
+# Call JAGS
+library(jagsUI)
+out2 <- jags(bdata, inits, params, "../dyn_multistate_occu/static2.txt", n.adapt = na, n.chains = nc, n.thin = nt, n.iter = ni, n.burnin = nb,
+             parallel = TRUE)
+
+```
+
+### Output figures 
+
+```{r}
+par(mfrow=c(3,3))
+# Because we have many plots, we are just going to plot a few for an example
+traceplot(out2, parameters = "psi")
+```
+
+### Output parameters
+
+```{r}
+print(out2)
+```
+
+
+
+## Dynamic Multi-season Model 
+
+### Model descritiption
+
+This model is again in the simplest form, where parameters have no dependency on site, survey, season, or covariates. The difference between this one and the previous one is the transition matrix and how each of the following years depends on the previous one. Additionally, here it uses a Dirichlet distribution as the prior for the vector $p3[1:3]$ in the observation matrix for the constraints on the probabilities. This model essentially incorporates all the aspects of the simulation we did earlier, where we start at year 1 with an initial state, and given a matrix of transition probabilities, the state of future years depends on the state of the year before. 
+
+Year 1: 
+$$
+z_{i,1}\sim Categorical(\Omega), \text{with} \quad \Omega = [1-\psi \quad \psi(1-r) \quad \psi r]
+$$
+Years 2 and beyond, where phi is the matrix of transition probabilities:
+
+$$
+z_{i,t}|z_{i,t-1} \sim Categorical(\Phi_{z{(t-1)}, z{(t)}})
+$$
+And observations given by:
+
+$$
+y_{i,j,t}|z_{i,t} \sim Categorical(\Theta_{z,o})
+$$
+
+
+### Model 
+
+```{r}
+# Same as in the static multi-season case
+str(bdata <- list(y = y, nsites = dim(y)[1], nsurveys = dim(y)[2], nyears = dim(y)[3]))
+
+# We specify the model
+
+cat(file = '../dyn_multistate_occu/dynamic1.txt',"
+    model {
+
+      #Priors
+      psi ~ dunif(0,1)
+      r ~ dunif(0,1)
+
+      for (s in 1:3) {
+        phi[s] ~ dunif(0,1)
+        rho[s] ~ dunif(0,1)
+      }
+
+      p2 ~ dunif(0,1)
+
+      for (s in 1:3) {
+        beta[s] ~ dgamma(1, 1)
+        p3[s] <- beta[s] / sum(beta[])
+      }
+
+      # Define initia state vector
+      Omega[1] <- 1 - psi
+      Omega[2] <- psi * (1-r)
+      Omega[3] <- psi * r
+
+      # Define transition matrix
+      PhiMat[1,1] <- 1 - phi[1]
+      PhiMat[1,2] <- phi[1] * (1 - rho[1])
+      PhiMat[1,3] <- phi[1] * rho[1]
+
+      PhiMat[2,1] <- 1 - phi[2]
+      PhiMat[2,2] <- phi[2] * (1 - rho[2])
+      PhiMat[2,3] <- phi[2] * rho[2]
+
+      PhiMat[3,1] <- 1 - phi[3]
+      PhiMat[3,2] <- phi[3] * (1 - rho[3])
+      PhiMat[3,3] <- phi[3] * rho[3]
+
+      # Define observation matrix
+      Theta[1,1] <- 1
+      Theta[1,2] <- 0
+      Theta[1,3] <- 0
+      Theta[2,1] <- 1-p2
+      Theta[2,2] <- p2
+      Theta[2,3] <- 0
+      Theta[3,1] <- p3[1]
+      Theta[3,2] <- p3[2]
+      Theta[3,3] <- p3[3]
+
+      # State-space likelihood
+      for (i in 1:nsites) {
+        z[i,1] ~ dcat(Omega[])
+      }
+
+      for (i in 1:nsites) {
+        for (t in 1:(nyears-1)) {
+          z[i,t+1] ~ dcat(PhiMat[z[i,t],])
+        }
+      }
+
+      for (t in 1:nyears) {
+        for (i in 1:nsites) {
+          for (j in 1:nsurveys) {
+            y[i,j,t] ~ dcat(Theta[z[i,t],])
+          }
+        }
+      }
+
+
+      # Derived quantities
+      for (t in 1:nyears) {
+        for (i in 1:nsites) {
+          occ1[i,t] <- equals(z[i,t], 1)
+          occ2[i,t] <- equals(z[i,t], 2)
+          occ3[i,t] <- equals(z[i,t], 3)
+        }
+        n.occ[t,1] <- sum(occ1[,t])
+        n.occ[t,2] <- sum(occ2[,t])
+        n.occ[t,3] <- sum(occ3[,t])
+      }
+    }
+    ")
+
+
+# Initial values
+inits <- function() {list(z = array(3, dim = c(bdata$nsites, bdata$nyears)))}
+
+#Parameters monitored
+params <- c("psi", "r", "phi", "rho", "p2", "p3", "Omega", "PhiMat", "Theta", "n.occ", "z")
+
+# MCMC settings
+na <- 1000 ; ni <- 2000 ; nt <- 2 ; nb <- 1000 ; nc <- 3
+
+# Call JAGS
+library(jagsUI)
+out3 <- jags(bdata, inits, params, "../dyn_multistate_occu/dynamic1.txt", n.adapt = na, n.chains = nc, n.thin = nt, n.iter = ni, n.burnin = nb,
+             parallel = TRUE)
+
+```
+
+
+### Output figures 
+
+```{r}
+par(mfrow=c(3,3))
+# Because we have many plots, we are just going to plot a few for an example
+traceplot(out3, parameters = "PhiMat")
+```
+
+
+### Params  
+
+```{r}
+print(out3)
+```
+
+
+
+
+
+
+
+
+
