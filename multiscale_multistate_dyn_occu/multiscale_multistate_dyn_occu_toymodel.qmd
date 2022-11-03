@@ -9,7 +9,7 @@ format:
     toc-depth: 4
 ---
 
-**Disclaimer** I find myself at a point in our project where the model is a lot more complex than we anticipated. My go to approach in situations like this is always to simulate data and test if what I am writing makes sense or not. So that is the point of this document. If you are interested in the [source code]() follow the link, and if you have any comments I would appreciate you let me know via Github Issues. At this point, I have mostly developed this and other resources for my personal use and understanding of these models. Cheers!
+**Disclaimer** I find myself at a point in our project where the model is a lot more complex than we anticipated. My go to approach in situations like this is always to simulate data and test if what I am writing makes sense or not. So that is the point of this document. If you are interested in the [source code](https://github.com/javirudolph/short-tutorials/blob/master/multiscale_multistate_dyn_occu/multiscale_multistate_dyn_occu_toymodel.qmd) follow the link, and if you have any comments I would appreciate you let me know via Github Issues. At this point, I have mostly developed this and other resources for my personal use and understanding of these models. Cheers!
 
 ## Introduction
 
@@ -27,6 +27,48 @@ I would like to divide this document into three sections:
 1.    Define or build the mathematical equations for this model
 1.    Write code to simulate data for the model
 1.    Fit our model to the simulated data to check that it works 
+
+
+## Deriving the MSMSDyn model 
+
+To start, we  can consider a simple dynamic model with potential occupancy states for each site $i$: *unoccupied*, *few bats*, *many bats*. The probability of each site $i$ being in one of those occupancy states at time $t$ is given by a combination of the state of the site in the last year $t-1$ and some environmental covariates. 
+
+With $z_{i,t}$ being the state of site $i$ at time $t$, drawn from a multinomial distribution with a vector of probabilities for each state. Given the dependency on the state of the previous year, we define the state of sites in the first year separately as:
+
+$$
+z_{i,1} \sim \text{Categorical}(\Omega_i)
+$$
+The initial state vector ($\Omega_i$) gives the probability of a site $i$ being in one of the three states: *unoccupied* (coded as 1), *few bats* (coded as 2), *many bats* (coded at 3), and is a combination of the probability of a site being occupied ($\psi$) and the probability that an occupied site is occupied by *many bats* ($r$).
+
+$$
+\Omega_i = [1-\psi \quad \psi(1-r) \quad \psi r]_i
+$$
+
+To keep it simple for now, I will not include covariates, but we will do so in the sections below. 
+
+The state of each site $i$ in the following years ($t = 2 \dots T$) is given by: 
+
+$$
+z_{i,t}|z_{i,t-1} \sim Categorical(\Phi_{z{(t-1)}, z{(t)}, i, t})
+$$
+where the transition matrix ($\Phi$) determines the probabilities of a site going from one state to another, or remaining in the same state, depending on covariates and the state at time $t-1$. We have parameterized the transition matrix in terms of colonization, persistence, growth, and decline:
+
+$$
+\Phi_{z{(t-1)}, z{(t)}, i,t} =  \begin{bmatrix}
+                                1-\gamma & \gamma & 0 \\
+                                1-\phi_1 & \phi_1(1-G) &  \phi_1G\\
+                                1-\phi_2 & \phi_2D & \phi_2(1 - D)
+                                \end{bmatrix}_{i,t}
+$$
+We read this matrix as rows being the state at time $t-1$ and columns being the state at time $t$. Where $\gamma$ parameters are state specific. This means $\gamma$ is the probability of an empty site at time $t-1$ being colonized by *few bats* at time $t$. We assume empty sites cannot be colonized by many bats in one time step. Persistence ($\phi$) describes the probability of a site staying in the same state from one year to another. Growth and decline probabilities are shown by $G$ and $D$.As an example, the probability that a site that is occupied by a *few bats* in year $t-1$ goes to having many bats in year $t$ is given by $\phi_1G$
+
+
+
+
+
+
+
+
 
 
 

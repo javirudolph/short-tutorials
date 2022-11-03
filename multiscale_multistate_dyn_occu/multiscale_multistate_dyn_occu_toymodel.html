@@ -30,6 +30,7 @@ ul.task-list{list-style: none;}
 <link href="multiscale_multistate_dyn_occu_toymodel_files/libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
 <link href="multiscale_multistate_dyn_occu_toymodel_files/libs/bootstrap/bootstrap.min.css" rel="stylesheet" id="quarto-bootstrap" data-mode="light">
 
+  <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml-full.js" type="text/javascript"></script>
 
 </head>
 
@@ -43,6 +44,7 @@ ul.task-list{list-style: none;}
   <ul>
   <li><a href="#introduction" id="toc-introduction" class="nav-link active" data-scroll-target="#introduction">Introduction</a></li>
   <li><a href="#roadmap" id="toc-roadmap" class="nav-link" data-scroll-target="#roadmap">Roadmap</a></li>
+  <li><a href="#deriving-the-msmsdyn-model" id="toc-deriving-the-msmsdyn-model" class="nav-link" data-scroll-target="#deriving-the-msmsdyn-model">Deriving the MSMSDyn model</a></li>
   </ul>
 </nav>
 </div>
@@ -73,7 +75,7 @@ ul.task-list{list-style: none;}
 
 </header>
 
-<p><strong>Disclaimer</strong> I find myself at a point in our project where the model is a lot more complex than we anticipated. My go to approach in situations like this is always to simulate data and test if what I am writing makes sense or not. So that is the point of this document. If you are interested in the <a href="">source code</a> follow the link, and if you have any comments I would appreciate you let me know via Github Issues. At this point, I have mostly developed this and other resources for my personal use and understanding of these models. Cheers!</p>
+<p><strong>Disclaimer</strong> I find myself at a point in our project where the model is a lot more complex than we anticipated. My go to approach in situations like this is always to simulate data and test if what I am writing makes sense or not. So that is the point of this document. If you are interested in the <a href="https://github.com/javirudolph/short-tutorials/blob/master/multiscale_multistate_dyn_occu/multiscale_multistate_dyn_occu_toymodel.qmd">source code</a> follow the link, and if you have any comments I would appreciate you let me know via Github Issues. At this point, I have mostly developed this and other resources for my personal use and understanding of these models. Cheers!</p>
 <section id="introduction" class="level2">
 <h2 class="anchored" data-anchor-id="introduction">Introduction</h2>
 <p><strong>So, what is a multiscale multistate dynamic occupancy model?</strong></p>
@@ -89,6 +91,32 @@ ul.task-list{list-style: none;}
 <li>Write code to simulate data for the model</li>
 <li>Fit our model to the simulated data to check that it works</li>
 </ol>
+</section>
+<section id="deriving-the-msmsdyn-model" class="level2">
+<h2 class="anchored" data-anchor-id="deriving-the-msmsdyn-model">Deriving the MSMSDyn model</h2>
+<p>To start, we can consider a simple dynamic model with potential occupancy states for each site <span class="math inline">\(i\)</span>: <em>unoccupied</em>, <em>few bats</em>, <em>many bats</em>. The probability of each site <span class="math inline">\(i\)</span> being in one of those occupancy states at time <span class="math inline">\(t\)</span> is given by a combination of the state of the site in the last year <span class="math inline">\(t-1\)</span> and some environmental covariates.</p>
+<p>With <span class="math inline">\(z_{i,t}\)</span> being the state of site <span class="math inline">\(i\)</span> at time <span class="math inline">\(t\)</span>, drawn from a multinomial distribution with a vector of probabilities for each state. Given the dependency on the state of the previous year, we define the state of sites in the first year separately as:</p>
+<p><span class="math display">\[
+z_{i,1} \sim \text{Categorical}(\Omega_i)
+\]</span></p>
+<p>The initial state vector (<span class="math inline">\(\Omega_i\)</span>) gives the probability of a site <span class="math inline">\(i\)</span> being in one of the three states: <em>unoccupied</em> (coded as 1), <em>few bats</em> (coded as 2), <em>many bats</em> (coded at 3), and is a combination of the probability of a site being occupied (<span class="math inline">\(\psi\)</span>) and the probability that an occupied site is occupied by <em>many bats</em> (<span class="math inline">\(r\)</span>).</p>
+<p><span class="math display">\[
+\Omega_i = [1-\psi \quad \psi(1-r) \quad \psi r]_i
+\]</span></p>
+<p>To keep it simple for now, I will not include covariates, but we will do so in the sections below.</p>
+<p>The state of each site <span class="math inline">\(i\)</span> in the following years (<span class="math inline">\(t = 2 \dots T\)</span>) is given by:</p>
+<p><span class="math display">\[
+z_{i,t}|z_{i,t-1} \sim Categorical(\Phi_{z{(t-1)}, z{(t)}, i, t})
+\]</span></p>
+<p>where the transition matrix (<span class="math inline">\(\Phi\)</span>) determines the probabilities of a site going from one state to another, or remaining in the same state, depending on covariates and the state at time <span class="math inline">\(t-1\)</span>. We have parameterized the transition matrix in terms of colonization, persistence, growth, and decline:</p>
+<p><span class="math display">\[
+\Phi_{z{(t-1)}, z{(t)}, i,t} =  \begin{bmatrix}
+                                1-\gamma &amp; \gamma &amp; 0 \\
+                                1-\phi_1 &amp; \phi_1(1-G) &amp;  \phi_1G\\
+                                1-\phi_2 &amp; \phi_2D &amp; \phi_2(1 - D)
+                                \end{bmatrix}_{i,t}
+\]</span></p>
+<p>We read this matrix as rows being the state at time <span class="math inline">\(t-1\)</span> and columns being the state at time <span class="math inline">\(t\)</span>. Where <span class="math inline">\(\gamma\)</span> parameters are state specific. This means <span class="math inline">\(\gamma\)</span> is the probability of an empty site at time <span class="math inline">\(t-1\)</span> being colonized by <em>few bats</em> at time <span class="math inline">\(t\)</span>. We assume empty sites cannot be colonized by many bats in one time step. Persistence (<span class="math inline">\(\phi\)</span>) describes the probability of a site staying in the same state from one year to another. Growth and decline probabilities are shown by <span class="math inline">\(G\)</span> and <span class="math inline">\(D\)</span>.As an example, the probability that a site that is occupied by a <em>few bats</em> in year <span class="math inline">\(t-1\)</span> goes to having many bats in year <span class="math inline">\(t\)</span> is given by <span class="math inline">\(\phi_1G\)</span></p>
 </section>
 
 </main>
