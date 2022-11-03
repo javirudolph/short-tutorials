@@ -1,0 +1,32 @@
+---
+title: "Multiscale Multistate Dynamic Occupancy Model"
+subtitle: "Calling this a self tutorial"
+author: "javirudolph"
+format:
+  html:
+    toc: true
+    toc-location: left
+    toc-depth: 4
+---
+
+**Disclaimer** I find myself at a point in our project where the model is a lot more complex than we anticipated. My go to approach in situations like this is always to simulate data and test if what I am writing makes sense or not. So that is the point of this document. If you are interested in the [source code]() follow the link, and if you have any comments I would appreciate you let me know via Github Issues. At this point, I have mostly developed this and other resources for my personal use and understanding of these models. Cheers!
+
+## Introduction
+
+**So, what is a multiscale multistate dynamic occupancy model?**
+
+The multiscale component has to do with subunits or subsampling. In my work with bats right now, we have certain cells that have been chosen to sample, and within each of those cells, there are 4 acoustic receivers installed. So, each of the receivers will collect information (in this case that information is bat calls), but those receivers are all within one of the cells that we consider as our main spatial unit. 
+
+The multistate component comes from the focus population having more than the *detection/non-detection* states. In our specific case with the bats we have a total of three states: *no bats*, *few bats*, *many bats*. 
+
+Finally, the dynamic components comes from the time series from multiple seasons or years. This is where we incorporate a transition matrix, which gives us the probability of a site switching from one state in a year, to a different state in the following year, or remaining the same. 
+
+## Roadmap 
+I would like to divide this document into three sections: 
+
+1.    Define or build the mathematical equations for this model
+1.    Write code to simulate data for the model
+1.    Fit our model to the simulated data to check that it works 
+
+
+
