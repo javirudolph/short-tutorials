@@ -1,108 +1,115 @@
 ---
-title: "Git and Github for Remote Collaboraiton"
+title: "Git and Github for Remote Collaboration"
 author: "@javirudolph"
-format: revealjs
+format:
+  revealjs: 
+    incremental: true
 self-contained: true
 ---
 
 
-# Why should I use GitHub?  
+# Objective
 
 - Maintaining code for scientific collaboration as a main objective.
-- Github to *store*, track changes, and enable collaboration on code.
+- Effective ways to *store*, track changes, and enable collaboration on code. 
+
 ## Why Github? 
   - it is the most used for version control and collaboration.
-	- integrates communication features: issues, discussions, pages
+	- integrates communication features
+	  - issues
+	  - discussions
+	  - pages
 	- engage and collaborate on code, but also publish info to a webpage. 
 
 
-# What is the difference between Git and Github. 
+# The difference between Git and Github
 - Git is the **version control system** that enables all the collaborative tools available on Github.
 - Git launched in 2005. 
   - Basic concepts of git: commit, push, pull, checkout.
 - Git operations through the terminal.
-- Github is a web-based platform also with a desktop environment that allows users to make most repo and data management operations without the command line
-  - makes these functionalities available to users less familiar with software development.
+- Github is web-based: functionality available to users less familiar with software development
   
-# Why Github?
 
-Github, GitLab, and BitBucket are all similar and they provide **hosting services**, which is basically a home for your project on the internet.
+# Github, GitLab, and BitBucket 
+
+They are all similar and they provide **hosting services**, which is basically a home for your project on the internet.
 
 It's like having a DropBox or GoogleDrive but for git-based projects.
 
 This allows other people to see your stuff, synchronize it, and contribute.
 
-# Some Github features
+# Some Github features 
+- Well-designed user interface
+- **Issues** originally a bug tracker but highly underutilized in our fields
+- R and Github integration is nicer due to the active R package development community.
 
--   Well-designed user interface
--   **Issues** originally a bug tracker but highly underutilized in our fields
--   R and Github integration is nicer due to the active R package development community.
-
-An intro on this can be found [here](https://peerj.com/preprints/3159v2/)
+- An intro on this can be found [here](https://peerj.com/preprints/3159v2/) and [here](https://journals.plos.org/ploscompbiol/article?id=10.1371/journal.pcbi.1004668)
 
 # Step-by-step process:
-
-
-
 :::: {.columns}
 
-::: {.column width="60%"}
+::: {.column width="50%"}
 ![Artwork by @allison_horst](ahorst_git_workflow.png)
 :::
 
-::: {.column width="60%"}
+::: {.column width="50%"}
 1. Create remote repo and sync with files and directory locally.
 2. Modify files locally or remotely
 3. Frequently ‘commit’ the changes with a description of the changes
 4. Synchronize commits with Github (push and pull)
 
-The repository contains: the files, the modifications and the description of these changes. Others can download and synchronize these files with their changes (‘clone’)
 :::
 
 ::::
 
-# Practical ways to use:
-1. Storage
+---
 
-Important: What NOT to track: just because you can version control something, doesn’t mean that you should. Best to reserve Git for plain text-based documents. Git stores the original file first, and then takes up very little space by only tracking the differences between versions. 
-Things not to version control are large data files that never change (like excel and word) and output of the code. If code is fully reproducible, you shouldn’t need to store the output. 
+### The repository contains: the files, the modifications and the description of these changes. Others can download and synchronize these files with their changes (‘clone’)
 
-1.a. better ‘storage’ for long term - zenodo or the like
+## Practical ways to use: 
 
-2. Project continuity. So many researchers hold limited-term appointments. Keeping docs on personal computers only does’t work for file transfer when people move on. 
-Easier code and data handover
+1. Storage: just because you *can* version control something, doesn’t mean that you *should*. 
+  - plain text-based documents. Git stores the original file first, and then takes up very little space by only tracking the differences between versions. 
+  - Things **not** to version control are [large data files](https://docs.github.com/en/repositories/working-with-files/managing-large-files) that never change.
+    - If code is fully reproducible, you shouldn’t need to store the output. 
+  - Better ‘storage’ for long term - zenodo
 
-3. Project management. Highly collaborative research.
-Github Issues for discrete taks and sub-tasks: identify, assign, categorize, keep track/history.
-Github Discussions: message board for conversation
-Github Projects: real0time tracking of project priorities and status
+## Practical ways to use: (cont.) 
 
-Example of paper with good tracking of issues and discussions: https://github.com/fmsabatini/sPlotOpen_Manuscript
+2. Project continuity
+  - So many researchers hold limited-term appointments
+    - Keeping docs on personal computers only does’t work for file transfer when people move on. 
+    - Easier code and data handover - **stop it with the emails**
+    - Assigning tasks
+
+## Practical ways to use: (cont.)  
+
+3. Project management: useful for highly collaborative research. 
+  - **Github Issues** for discrete tasks and sub-tasks: identify, assign, categorize, keep track/history.
+  - **Github Discussions**: message board for conversation
+  - **Github Projects** real-time tracking of project priorities and status
+- Examples:
+  - [Paper](https://github.com/fmsabatini/sPlotOpen_Manuscript) with good tracking of issues and discussions
+  - [Reproducible article](https://github.com/cboettig/noise-phenomena)
 
 
-
-
-
-
-
-
-# How to work with Git and Github?
+# Intro Resources
 
 For the R user, best simple straightforward resource out there is [Happy git with R](https://happygitwithr.com/index.html)
 
 Github itself has a dedicated section for learning in the [docs](https://docs.github.com/en/get-started) and in particular, the [Hello World tutorial](https://docs.github.com/en/get-started/quickstart/hello-world) will get you creating a repo, managing a branch and merging a pull request.
 
-
-
-# Branches and pull requests
+## Branches and pull requests
 
 1.  Create **Branch** to make a change.
 2.  Commit changes to the new branch.
 3.  Open **Pull request** to merge the changes to main branch.
 4.  Optional and recommended: delete branch
-
-Also known as a [feature branch workflow](https://www.atlassian.com/git/tutorials/comparing-workflows/feature-branch-workflow)
+- Also known as a [feature branch workflow](https://www.atlassian.com/git/tutorials/comparing-workflows/feature-branch-workflow)
 
 # 
 
 ![source https://www.nobledesktop.com/learn/git/git-branches](git-branches-merge.png)
+
+# Demo 
+
