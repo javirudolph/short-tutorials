@@ -6,6 +6,47 @@ self-contained: true
 ---
 
 
-# Hi
+# What is Git?
 
-Hello
+**Version control system** which essentially keeps track of a group of files and their history. You could think of it as the phylogenetic tree of your files.
+
+A **repository** is a collection of files within a group that gets tracked together.
+
+# Why Github?
+
+Github, GitLab, and BitBucket are all similar and they provide **hosting services**, which is basically a home for your project on the internet.
+
+It's like having a DropBox or GoogleDrive but for git-based projects.
+
+This allows other people to see your stuff, synchronize it, and contribute.
+
+# Some Github features
+
+-   Well-designed user interface
+-   **Issues** originally a bug tracker but highly underutilized in our fields
+-   R and Github integration is nicer due to the active R package development community.
+
+An intro on this can be found [here](https://peerj.com/preprints/3159v2/)
+
+# How to work with Git and Github?
+
+For the R user, best simple straightforward resource out there is [Happy git with R](https://happygitwithr.com/index.html)
+
+Github itself has a dedicated section for learning in the [docs](https://docs.github.com/en/get-started) and in particular, the [Hello World tutorial](https://docs.github.com/en/get-started/quickstart/hello-world) will get you creating a repo, managing a branch and merging a pull request.
+
+# 
+
+![Artwork by @allison_horst](ahorst_git_workflow.png)
+
+# Branches and pull requests
+
+1.  Create **Branch** to make a change.
+2.  Commit changes to the new branch.
+3.  Open **Pull request** to merge the changes to main branch.
+4.  Optional and recommended: delete branch
+
+Also known as a [feature branch workflow](https://www.atlassian.com/git/tutorials/comparing-workflows/feature-branch-workflow)
+
+# 
+
+![source https://www.nobledesktop.com/learn/git/git-branches](git-branches-merge.png)
