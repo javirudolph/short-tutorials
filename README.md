@@ -6,4 +6,4 @@ Lately, as I am working on my postdoc, I am getting into Bayesian stuff and occu
 
 In progress, a short tutorial for vector mediated pathogen dispersal [here](https://javirudolph.github.io/short-tutorials/vector-mediated-dispersal/dispersal_kernel_example.html)
 
-Working on a git and github tutorial... [in progress...](https://javirudolph.github.io/git_github/git_github_pres.html)
+Working on a git and github tutorial... [in progress...](https://javirudolph.github.io/short-tutorials/git_github/git_github_pres.html)
