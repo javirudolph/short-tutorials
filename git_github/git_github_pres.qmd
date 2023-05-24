@@ -85,12 +85,10 @@ This allows other people to see your stuff, synchronize it, and contribute.
 ## Practical ways to use: (cont.)  
 
 3. Project management: useful for highly collaborative research. 
-  - **Github Issues** for discrete tasks and sub-tasks: identify, assign, categorize, keep track/history.
-  - **Github Discussions**: message board for conversation
-  - **Github Projects** real-time tracking of project priorities and status
-- Examples:
-  - [Paper](https://github.com/fmsabatini/sPlotOpen_Manuscript) with good tracking of issues and discussions
-  - [Reproducible article](https://github.com/cboettig/noise-phenomena)
+  - [Github Issues](https://docs.github.com/en/issues/tracking-your-work-with-issues/quickstart) for discrete tasks and sub-tasks: identify, assign, categorize, keep track/history.
+  - [Github Discussions](https://docs.github.com/en/discussions/collaborating-with-your-community-using-discussions/about-discussions) message board for conversation
+  - [Github Projects:](https://docs.github.com/en/issues/planning-and-tracking-with-projects/learning-about-projects/about-projects) real-time tracking of project priorities and status
+- Examples: [Paper](https://github.com/fmsabatini/sPlotOpen_Manuscript) with good tracking of issues and discussion and a [Reproducible article](https://github.com/cboettig/noise-phenomena)
 
 
 # Intro Resources
