@@ -2,4 +2,10 @@
 title: "Git and Github for Remote Collaboraiton"
 author: "@javirudolph"
 format: revealjs
+self-contained: true
 ---
+
+
+# Hi
+
+Hello
