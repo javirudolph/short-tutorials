@@ -6,12 +6,24 @@ self-contained: true
 ---
 
 
-# What is Git?
+# Why should I use GitHub?  
 
-**Version control system** which essentially keeps track of a group of files and their history. You could think of it as the phylogenetic tree of your files.
+- Maintaining code for scientific collaboration as a main objective.
+- Github to *store*, track changes, and enable collaboration on code.
+## Why Github? 
+  - it is the most used for version control and collaboration.
+	- integrates communication features: issues, discussions, pages
+	- engage and collaborate on code, but also publish info to a webpage. 
 
-A **repository** is a collection of files within a group that gets tracked together.
 
+# What is the difference between Git and Github. 
+- Git is the **version control system** that enables all the collaborative tools available on Github.
+- Git launched in 2005. 
+  - Basic concepts of git: commit, push, pull, checkout.
+- Git operations through the terminal.
+- Github is a web-based platform also with a desktop environment that allows users to make most repo and data management operations without the command line
+  - makes these functionalities available to users less familiar with software development.
+  
 # Why Github?
 
 Github, GitLab, and BitBucket are all similar and they provide **hosting services**, which is basically a home for your project on the internet.
@@ -28,15 +40,59 @@ This allows other people to see your stuff, synchronize it, and contribute.
 
 An intro on this can be found [here](https://peerj.com/preprints/3159v2/)
 
+# Step-by-step process:
+
+
+
+:::: {.columns}
+
+::: {.column width="60%"}
+![Artwork by @allison_horst](ahorst_git_workflow.png)
+:::
+
+::: {.column width="60%"}
+1. Create remote repo and sync with files and directory locally.
+2. Modify files locally or remotely
+3. Frequently ‘commit’ the changes with a description of the changes
+4. Synchronize commits with Github (push and pull)
+
+The repository contains: the files, the modifications and the description of these changes. Others can download and synchronize these files with their changes (‘clone’)
+:::
+
+::::
+
+# Practical ways to use:
+1. Storage
+
+Important: What NOT to track: just because you can version control something, doesn’t mean that you should. Best to reserve Git for plain text-based documents. Git stores the original file first, and then takes up very little space by only tracking the differences between versions. 
+Things not to version control are large data files that never change (like excel and word) and output of the code. If code is fully reproducible, you shouldn’t need to store the output. 
+
+1.a. better ‘storage’ for long term - zenodo or the like
+
+2. Project continuity. So many researchers hold limited-term appointments. Keeping docs on personal computers only does’t work for file transfer when people move on. 
+Easier code and data handover
+
+3. Project management. Highly collaborative research.
+Github Issues for discrete taks and sub-tasks: identify, assign, categorize, keep track/history.
+Github Discussions: message board for conversation
+Github Projects: real0time tracking of project priorities and status
+
+Example of paper with good tracking of issues and discussions: https://github.com/fmsabatini/sPlotOpen_Manuscript
+
+
+
+
+
+
+
+
 # How to work with Git and Github?
 
 For the R user, best simple straightforward resource out there is [Happy git with R](https://happygitwithr.com/index.html)
 
 Github itself has a dedicated section for learning in the [docs](https://docs.github.com/en/get-started) and in particular, the [Hello World tutorial](https://docs.github.com/en/get-started/quickstart/hello-world) will get you creating a repo, managing a branch and merging a pull request.
 
-# 
 
-![Artwork by @allison_horst](ahorst_git_workflow.png)
 
 # Branches and pull requests
 
