@@ -22,7 +22,7 @@ self-contained: true
 	- engage and collaborate on code, but also publish info to a webpage. 
 
 
-# The difference between Git and Github
+## The difference between Git and Github
 - Git is the **version control system** that enables all the collaborative tools available on Github.
 - Git launched in 2005. 
   - Basic concepts of git: commit, push, pull, checkout.
@@ -30,7 +30,7 @@ self-contained: true
 - Github is web-based: functionality available to users less familiar with software development
   
 
-# Github, GitLab, and BitBucket 
+## Github, GitLab, and BitBucket 
 
 They are all similar and they provide **hosting services**, which is basically a home for your project on the internet.
 
@@ -38,14 +38,14 @@ It's like having a DropBox or GoogleDrive but for git-based projects.
 
 This allows other people to see your stuff, synchronize it, and contribute.
 
-# Some Github features 
+## Some Github features 
 - Well-designed user interface
 - **Issues** originally a bug tracker but highly underutilized in our fields
 - R and Github integration is nicer due to the active R package development community.
 
 - An intro on this can be found [here](https://peerj.com/preprints/3159v2/) and [here](https://journals.plos.org/ploscompbiol/article?id=10.1371/journal.pcbi.1004668)
 
-# Step-by-step process:
+## Step-by-step process:
 :::: {.columns}
 
 ::: {.column width="50%"}
@@ -61,10 +61,6 @@ This allows other people to see your stuff, synchronize it, and contribute.
 :::
 
 ::::
-
----
-
-### The repository contains: the files, the modifications and the description of these changes. Others can download and synchronize these files with their changes (‘clone’)
 
 ## Practical ways to use: 
 
